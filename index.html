@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FLY TO MOON</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --cell-size: clamp(42px, 10.8vw, 58px);
+      --cell-gap: 5px;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 34%),
+        radial-gradient(circle at top right, rgba(168, 85, 247, 0.20), transparent 30%),
+        linear-gradient(180deg, #0f172a 0%, #111827 48%, #020617 100%);
+      color: #e5e7eb;
+      min-height: 100vh;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 12px;
+      padding-bottom: 96px;
+    }
+
+    .header, .card-box, .players-box, .config-box, .log-box, .event-box, .board-wrap {
+      background: rgba(15, 23, 42, 0.74);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 22px;
+      padding: 14px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.30);
+    }
+
+    .header { padding: 14px; margin-bottom: 10px; }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #ffffff, #93c5fd, #c4b5fd);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .desc { margin: 0; color: #cbd5e1; line-height: 1.45; font-size: 12px; }
+
+    .panel { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 10px; }
+    .config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
+    label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 4px; }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 16px;
+      outline: none;
+      background: rgba(15, 23, 42, 0.72);
+      color: #f8fafc;
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      padding: 14px 16px;
+      font-size: 17px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:not(:disabled):active { transform: scale(0.98); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .primary-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: white;
+      margin-top: 8px;
+      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.34);
+    }
+
+    .secondary-btn {
+      width: 100%;
+      background: rgba(30, 41, 59, 0.86);
+      color: #bfdbfe;
+      margin-top: 8px;
+      border: 1px solid rgba(147, 197, 253, 0.20);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .settings-toggle {
+      width: 100%;
+      margin: 0;
+      padding: 12px 14px;
+      font-size: 15px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.34), rgba(124, 58, 237, 0.24));
+      color: #e0f2fe;
+      border: 1px solid rgba(147, 197, 253, 0.22);
+    }
+
+    .settings-content { display: none; margin-top: 10px; }
+    .settings-content.open { display: block; }
+    .settings-title { font-size: 15px; font-weight: 950; color: #e0f2fe; margin: 10px 0 6px; }
+
+    .toggle-row { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 10px 0 8px; }
+    .toggle-item {
+      display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 14px;
+      background: rgba(15, 23, 42, 0.58); border: 1px solid rgba(148, 163, 184, 0.20);
+      font-size: 14px; cursor: pointer; user-select: none; color: #e5e7eb;
+    }
+    .toggle-item input { width: auto; transform: scale(1.2); }
+
+    .current-turn {
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: #e0f2fe;
+      font-weight: 950;
+      letter-spacing: -0.2px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.26), rgba(124, 58, 237, 0.18));
+      border: 1px solid rgba(96, 165, 250, 0.28);
+    }
+
+    .draw-result, .event-result {
+      min-height: 92px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(30,41,59,0.92), rgba(30,64,175,0.22));
+      border: 1px dashed rgba(147, 197, 253, 0.45);
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      padding: 12px; line-height: 1.45; font-size: 17px; font-weight: 800; color: #e0f2fe;
+    }
+
+    .event-result { min-height: 120px; margin-top: 8px; }
+
+    .dice-number {
+      display: inline-block;
+      font-size: clamp(70px, 20vw, 92px);
+      line-height: 1;
+      background: linear-gradient(135deg, #60a5fa, #c4b5fd);
+      -webkit-background-clip: text;
+      color: transparent;
+      font-weight: 950;
+      margin-top: 4px;
+    }
+
+    .dice-unit { font-size: 34px; color: #93c5fd; font-weight: 900; margin-left: 4px; }
+    .dice-rolling { animation: dicePulse 0.16s ease-in-out infinite alternate; }
+
+    @keyframes dicePulse {
+      from { transform: scale(0.92) rotate(-5deg); filter: blur(0px); }
+      to { transform: scale(1.08) rotate(5deg); filter: blur(0.4px); }
+    }
+
+    .event-main-text {
+      font-size: clamp(28px, 8vw, 42px);
+      line-height: 1.3;
+      background: linear-gradient(135deg, #60a5fa, #c4b5fd);
+      -webkit-background-clip: text;
+      color: transparent;
+      font-weight: 950;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      max-height: 320px;
+      overflow-y: auto;
+      letter-spacing: -0.5px;
+      padding-right: 4px;
+    }
+
+    .players-list { display: grid; grid-template-columns: 1fr; gap: 8px; }
+
+    .player-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px; border-radius: 14px; background: rgba(30, 41, 59, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.20); font-size: 14px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .player-item.current {
+      border-color: rgba(96, 165, 250, 0.95);
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.22), 0 12px 28px rgba(37, 99, 235, 0.28);
+      transform: translateY(-1px);
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.42), rgba(124, 58, 237, 0.28));
+    }
+
+    .player-name { display: flex; align-items: center; gap: 8px; font-weight: 800; min-width: 0; flex-wrap: wrap; }
+    .dot { width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 2px solid rgba(255,255,255,0.85); box-shadow: 0 0 10px rgba(255,255,255,0.18); flex: 0 0 auto; }
+
+    .board-wrap { overflow-x: auto; margin-top: 10px; padding: 10px; -webkit-overflow-scrolling: touch; }
+    .board-action { margin-bottom: 10px; }
+    .board { display: grid; grid-template-columns: repeat(6, var(--cell-size)); gap: var(--cell-gap); width: max-content; min-width: auto; margin: 0 auto; }
+
+    .cell {
+      position: relative; width: var(--cell-size); min-height: var(--cell-size); border-radius: 12px;
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(148, 163, 184, 0.22); padding: 4px; font-size: 10px; color: #94a3b8;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 4px 12px rgba(0, 0, 0, 0.18);
+      cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      touch-action: manipulation; overflow: hidden;
+    }
+
+    .cell:hover { transform: translateY(-2px); border-color: rgba(147, 197, 253, 0.55); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28); }
+    .cell.start { background: linear-gradient(135deg, rgba(22, 101, 52, 0.92), rgba(21, 128, 61, 0.78)); color: #dcfce7; font-weight: 800; }
+    .cell.end { background: linear-gradient(135deg, rgba(153, 27, 27, 0.92), rgba(190, 24, 93, 0.76)); color: #fee2e2; font-weight: 800; }
+    .cell.task { border-color: rgba(96, 165, 250, 0.70); }
+    .cell.reward { border-color: rgba(74, 222, 128, 0.70); }
+    .cell.penalty { border-color: rgba(248, 113, 113, 0.70); }
+    .cell-type { margin-top: 2px; font-size: 10px; opacity: 0.90; }
+
+    .pieces { position: absolute; bottom: 5px; left: 5px; right: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
+    .piece { width: clamp(18px, 4.7vw, 24px); height: clamp(18px, 4.7vw, 24px); border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.42), 0 0 14px rgba(255,255,255,0.18); transition: transform 0.18s ease, box-shadow 0.18s ease; }
+    .piece.active { transform: scale(1.75); box-shadow: 0 0 0 5px rgba(96, 165, 250, 0.24), 0 6px 18px rgba(0, 0, 0, 0.55); z-index: 3; }
+
+    .log-list { margin: 0; padding-left: 18px; max-height: 160px; overflow-y: auto; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+    .section-space { margin-bottom: 14px; }
+    .cell-hint { margin-top: 8px; padding: 9px 10px; border-radius: 14px; background: rgba(30,41,59,0.82); border: 1px solid rgba(147,197,253,0.18); color: #cbd5e1; font-size: 12px; line-height: 1.45; }
+    .chain-note { display: inline-block; margin-top: 6px; padding: 3px 8px; border-radius: 999px; background: rgba(124,58,237,0.28); color: #ddd6fe; font-size: 12px; font-weight: 800; }
+
+    .event-modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(2,6,23,0.72); backdrop-filter: blur(10px); }
+    .event-modal.show { display: flex; }
+    .event-card { width: min(92vw, 520px); min-height: clamp(260px, 46vh, 520px); max-height: 86vh; border-radius: 26px; padding: clamp(20px, 4vw, 28px); background: linear-gradient(180deg, rgba(15,23,42,0.98), rgba(30,41,59,0.98)); border: 2px solid rgba(147,197,253,0.30); box-shadow: 0 30px 80px rgba(0,0,0,0.50); animation: cardPop 0.24s ease-out; display: flex; flex-direction: column; justify-content: center; }
+    .event-card.task { border-color: rgba(96,165,250,0.95); background: radial-gradient(circle at top left, rgba(37,99,235,0.36), transparent 42%), linear-gradient(180deg, rgba(15,23,42,0.98), rgba(30,41,59,0.98)); animation: cardPop 0.24s ease-out, taskPulse 1.6s ease-in-out infinite alternate; }
+    .event-card.reward { border-color: rgba(74,222,128,0.95); background: radial-gradient(circle at top left, rgba(34,197,94,0.34), transparent 42%), linear-gradient(180deg, rgba(15,23,42,0.98), rgba(20,83,45,0.76)); animation: cardPop 0.24s ease-out, rewardGlow 1.35s ease-in-out infinite alternate; }
+    .event-card.penalty { border-color: rgba(248,113,113,0.95); background: radial-gradient(circle at top left, rgba(239,68,68,0.34), transparent 42%), linear-gradient(180deg, rgba(15,23,42,0.98), rgba(127,29,29,0.76)); animation: cardPop 0.24s ease-out, penaltyShake 0.42s ease-in-out 1; }
+    .event-card.ending { border-color: rgba(196,181,253,0.95); background: radial-gradient(circle at top left, rgba(168,85,247,0.38), transparent 42%), linear-gradient(180deg, rgba(15,23,42,0.98), rgba(59,7,100,0.76)); animation: cardPop 0.24s ease-out, endingGlow 1.5s ease-in-out infinite alternate; }
+
+    @keyframes cardPop { from { transform: translateY(14px) scale(0.94); opacity: 0; } 70% { transform: translateY(-2px) scale(1.015); opacity: 1; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes rewardGlow { from { box-shadow: 0 30px 80px rgba(0,0,0,0.50), 0 0 0 rgba(74,222,128,0); } to { box-shadow: 0 30px 80px rgba(0,0,0,0.50), 0 0 34px rgba(74,222,128,0.42); } }
+    @keyframes taskPulse { from { box-shadow: 0 30px 80px rgba(0,0,0,0.50), 0 0 0 rgba(96,165,250,0); } to { box-shadow: 0 30px 80px rgba(0,0,0,0.50), 0 0 24px rgba(96,165,250,0.32); } }
+    @keyframes endingGlow { from { box-shadow: 0 30px 80px rgba(0,0,0,0.50), 0 0 0 rgba(196,181,253,0); } to { box-shadow: 0 30px 80px rgba(0,0,0,0.50), 0 0 42px rgba(196,181,253,0.42); } }
+    @keyframes penaltyShake { 0% { transform: translateX(0) scale(1); } 20% { transform: translateX(-6px) scale(1.01); } 40% { transform: translateX(6px) scale(1.01); } 60% { transform: translateX(-4px) scale(1.005); } 80% { transform: translateX(4px) scale(1.005); } 100% { transform: translateX(0) scale(1); } }
+
+    .event-card-label { display: inline-block; padding: 5px 10px; border-radius: 999px; background: rgba(96,165,250,0.18); color: #bfdbfe; font-size: 13px; font-weight: 900; margin-bottom: 12px; }
+    .event-card.reward .event-card-label { background: rgba(34,197,94,0.20); color: #bbf7d0; }
+    .event-card.penalty .event-card-label { background: rgba(239,68,68,0.20); color: #fecaca; }
+    .event-card.ending .event-card-label { background: rgba(168,85,247,0.22); color: #ddd6fe; }
+    .event-card-title { font-size: clamp(28px, 8vw, 44px); line-height: 1.25; font-weight: 950; background: linear-gradient(135deg, #60a5fa, #c4b5fd); -webkit-background-clip: text; color: transparent; word-break: break-word; overflow-wrap: anywhere; max-height: 62vh; overflow-y: auto; margin-bottom: 16px; padding-right: 4px; white-space: pre-wrap; }
+    .event-card-title.summary-title { font-size: clamp(18px, 4.8vw, 26px); line-height: 1.45; color: #e0f2fe; background: none; -webkit-background-clip: initial; white-space: pre-wrap; }
+    .event-card-meta { color: #cbd5e1; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+    .skip-card-btn { width: 100%; padding: 10px 14px; font-size: 13px; border-radius: 14px; margin-bottom: 8px; background: rgba(30,41,59,0.86); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+    .skip-card-btn.hidden { display: none; }
+    .modal-close-btn { width: 100%; background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; box-shadow: 0 10px 30px rgba(37,99,235,0.34); }
+
+    .mobile-roll-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: block; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, rgba(2,6,23,0), rgba(2,6,23,0.94) 28%, rgba(2,6,23,0.98)); backdrop-filter: blur(10px); }
+    .mobile-roll-bar button { max-width: 520px; margin: 0 auto; display: block; }
+    .mobile-turn-status, .mobile-dice-display { max-width: 520px; margin: 0 auto 8px; padding: 8px 10px; border-radius: 14px; background: rgba(15,23,42,0.82); border: 1px solid rgba(147,197,253,0.18); color: #dbeafe; font-size: 13px; font-weight: 850; text-align: center; }
+    .mobile-dice-display { min-height: 76px; display: flex; align-items: center; justify-content: center; line-height: 1.35; }
+    .mobile-dice-display .dice-number { font-size: 56px; }
+    .mobile-dice-display .dice-unit { font-size: 24px; }
+
+    @media (min-width: 760px) {
+      .app { max-width: 980px; padding: 16px; padding-bottom: 24px; }
+      .panel { grid-template-columns: 1.1fr 1fr; }
+      .board-wrap { max-width: 800px; margin-left: auto; margin-right: auto; }
+      .board { grid-template-columns: repeat(10, 70px); width: max-content; min-width: auto; }
+      .cell { width: 70px; min-height: 70px; font-size: 10px; }
+      .piece { width: 18px; height: 18px; }
+      .mobile-roll-bar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>FLY TO MOON</h1>
+      <p class="desc">Creat for play with two grils. If you got sth and dont know how to do it as a man, let them do it together for you. 
+    </div>
+
+    <div class="panel">
+      <div class="card-box">
+        <div class="current-turn" id="currentTurn">当前回合：玩家1</div>
+        <div class="draw-result" id="drawResult">点击“投骰子”开始游戏</div>
+        <button class="primary-btn roll-btn" id="drawBtn">投骰子</button>
+      </div>
+
+      <div class="config-box">
+        <button class="settings-toggle" id="settingsToggleBtn">打开设置</button>
+        <div class="settings-content" id="settingsContent">
+          <div class="config-row">
+            <div>
+              <label for="playerCountInput">玩家人数</label>
+              <input id="playerCountInput" type="number" min="2" max="6" value="3" />
+            </div>
+            <div>
+              <label for="boardSizeInput">格子数量</label>
+              <input id="boardSizeInput" type="number" min="10" max="200" value="100" />
+            </div>
+          </div>
+          <div class="settings-title">事件屏蔽</div>
+          <div class="toggle-row">
+            <label class="toggle-item"><input id="blockA" type="checkbox" />屏蔽针对sub的排泄play事件</label>
+            <label class="toggle-item"><input id="blockB" type="checkbox" />屏蔽针对sub的女绿play事件</label>
+            <label class="toggle-item"><input id="blockC" type="checkbox" />屏蔽露出事件</label>
+            <label class="toggle-item"><input id="allowSkip" type="checkbox" />允许跳过</label>
+          </div>
+          <div class="settings-title">专属 sub 卡池</div>
+          <div class="toggle-row">
+            <label class="toggle-item"><input id="enableSubP2" type="checkbox" checked/>为玩家2开启 sub 卡池</label>
+            <label class="toggle-item"><input id="enableSubP3" type="checkbox" />为玩家3开启 sub 卡池</label>
+          </div>
+          <button class="secondary-btn" id="resetBtn">重新开始</button>
+          <button class="secondary-btn" id="applyConfigBtn">应用配置并重开</button>
+          <button class="secondary-btn" id="loadSaveBtn">读取上次进度</button>
+          <button class="secondary-btn" id="clearSaveBtn">清除保存</button>
+          <div class="settings-title">事件内容导入（追加）</div>
+          <textarea id="eventImportText" placeholder='粘贴JSON：{"task":{"1":["任务1"],"2":[],"3":[]},"taskSub":{"1":["sub任务1"],"2":[],"3":[]},"reward":{"1":[],"2":[],"3":[]},"penalty":{"1":[],"2":[],"3":[]},"ending":["结局1"]}'></textarea>
+          <button class="secondary-btn" id="importEventsBtn">导入事件内容</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="players-box section-space">
+      <strong>玩家状态</strong>
+      <div class="players-list" id="playersList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="event-box section-space">
+      <strong>当前格子内容</strong>
+      <div class="event-result" id="eventResult">尚未触发格子内容</div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board-action">
+        <button class="primary-btn roll-btn" id="boardDrawBtn">投骰子</button>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="cell-hint" id="cellHint">点击或悬停格子，可查看格子状态。</div>
+    </div>
+
+    <div class="log-box" style="margin-top:14px;">
+      <strong>游戏记录</strong>
+      <ol class="log-list" id="logList"></ol>
+    </div>
+  </div>
+
+  <div class="event-modal" id="eventModal">
+    <div class="event-card" id="eventCard">
+      <div class="event-card-label" id="eventCardLabel">事件</div>
+      <div class="event-card-title" id="eventCardTitle">事件内容</div>
+      <div class="event-card-meta" id="eventCardMeta">事件说明</div>
+      <button class="skip-card-btn" id="skipCardBtn">跳过</button>
+      <button class="modal-close-btn" id="eventModalCloseBtn">确认</button>
+    </div>
+  </div>
+
+  <div class="mobile-roll-bar">
+    <div class="mobile-dice-display" id="mobileDiceDisplay">等待玩家投骰子</div>
+    <div class="mobile-turn-status" id="mobileTurnStatus">当前玩家：玩家1｜下一位：玩家2</div>
+    <button class="primary-btn roll-btn" id="mobileDrawBtn">投骰子</button>
+  </div>
+
+  <script>
+    const SAVE_KEY = "draw-card-flight-chess-save-v3";
+    const colors = ["#ef4444", "#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#14b8a6"];
+    const diceFaces = [1, 2, 3, 4, 5, 6];
+    const cellTypeText = { task: "任务", reward: "奖励", penalty: "惩罚", start: "起点", ending: "结局" };
+    const config = { playerCount: 3, boardSize: 92, eventCountPerLevel: 0 };
+//
+//    const builtInEvents = {
+//      task: { 1: [], 2: [], 3: [] },
+//      // 任务 sub 卡池：只有开启 sub 的玩家2/玩家3有机会抽到。
+//      // 写法同普通任务池：可以写字符串，也可以写 { text, isA, isB, isC }。
+//      taskSub: { 1: [], 2: [], 3: [] },
+//      reward: { 1: [], 2: [], 3: [] },
+//      penalty: { 1: [], 2: [], 3: [] },
+//      ending: []
+//    };
+
+    const builtInEvents = {
+      task: {
+        1: [
+            { text:"请另一位女生在你胸上写上羞辱或赞美性的文字或者图案。如果你是玩家一，对玩家2/3这样做                  ",isA: false, isB: false, isC:false},          
+            { text:"请另一位女生在你下体周围写上羞辱或赞美性的文字或者图案。如果你是玩家一，对玩家2/3这样做              ",isA: false, isB: false, isC:false},          
+            { text:"请另一位女生在你后穴周围写上羞辱或赞美性的文字或者图案。如果你是玩家一，对玩家2/3这样做              ",isA: false, isB: false, isC:false},          
+            { text:"请另一位女生在你大腿上写上羞辱或赞美性的文字或者图案。如果你是玩家一，对玩家2/3这样做                ",isA: false, isB: false, isC:false},          
+            { text:"请另一位女生在你小腹写上羞辱或赞美性的文字或者图案。如果你是玩家一，对玩家2/3这样做                  ",isA: false, isB: false, isC:false},          
+            { text:"请另一位女生在你屁股写上羞辱或赞美性的文字或者图案。如果你是玩家一，对玩家2/3这样做                  ",isA: false, isB: false, isC:false},          
+            { text:"请另一位女生在你脸写上羞辱或赞美性的文字或者图案。如果你是玩家一，对玩家2/3这样做                    ",isA: false, isB: false, isC:false},          
+            { text:"亲吻你想亲吻的人，或者三人一起舌吻                                                                   ",isA: false, isB: false, isC:false},          
+            { text:"亲吻上一位玩家，或者三人一起舌吻                                                                     ",isA: false, isB: false, isC:false},          
+            { text:"亲吻上一位玩家的小腹1分钟                                                                            ",isA: false, isB: false, isC:false},          
+            { text:"亲吻上一位玩家的脚踝1分钟                                                                            ",isA: false, isB: false, isC:false},          
+            { text:"亲吻上一位玩家的脚趾1分钟                                                                            ",isA: false, isB: false, isC:false},          
+            { text:"嘴对嘴为下一位玩家喂水                                                                               ",isA: false, isB: false, isC:false},          
+            { text:"亲吻上一位玩家的嘴唇10秒，结束后用甜美的声音夸对方一句。                                             ",isA: false, isB: false, isC:false},          
+            { text:"独自脱掉上衣，只剩胸罩或内衣，保持这个状态。                                                         ",isA: false, isB: false, isC:false},          
+            { text:"描述你认为你身体最有魅力的部位，并展示                                                               ",isA: false, isB: false, isC:false},          
+            { text:"描述你认为上一位玩家身体最有魅力的部位，并说明理由                                                   ",isA: false, isB: false, isC:false},          
+            { text:"描述你认为你身体最有魅力的部位，并展示                                                               ",isA: false, isB: false, isC:false},          
+            { text:"用舌尖慢慢舔上一位玩家的耳垂和耳后，持续20秒。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"描述你今天最想被上一位玩家怎么爱抚。                                                                 ",isA: false, isB: false, isC:false},          
+            { text:"隔着上一位玩家的裤子，用脸颊轻轻蹭对方的下体位置，持续25秒。                                         ",isA: false, isB: false, isC:false},          
+            { text:"独自换上情趣内衣或仅仅保留内衣，并在另外两人面前走一圈展示。                                         ",isA: false, isB: false, isC:false},          
+            { text:"看着对方的眼睛，用脚轻轻踩踏上一位玩家的大腿内侧，持续20秒。                                         ",isA: false, isB: false, isC:false},          
+            { text:"详细分享一个你最近做过的带有性意味的梦或性幻想。                                                     ",isA: false, isB: false, isC:false},          
+            { text:"亲吻上一位玩家的脖子，从耳下一直亲到锁骨。                                                           ",isA: false, isB: false, isC:false},          
+            { text:"独自用手指隔着内裤，在自己阴部上方轻轻画圈30秒，展示给大家看。如果你是玩家一，请玩家2/3同时这样做    ",isA: false, isB: false, isC:false},          
+            { text:"三人一起：你和另一位玩家同时在上一位玩家耳边轻声喘息10秒。                                           ",isA: false, isB: false, isC:false},          
+            { text:"用舌头舔上一位玩家的手指，一根一根慢慢舔，眼神看着对方。                                             ",isA: false, isB: false, isC:false},          
+            { text:"独自脱掉裤子，只穿内裤或情趣内衣，向大家展示你的臀部。如果你是玩家一，请玩家2/3这样做                ",isA: false, isB: false, isC:false},          
+            { text:"描述你最喜欢被亲吻的身体部位，并现场给上一位玩家体验。                                               ",isA: false, isB: false, isC:false},          
+            { text:"用脚背轻轻摩擦爱抚上一位玩家的小腿和大腿外侧。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"独自说出三句最想对上一位玩家说的色情话。                                                             ",isA: false, isB: false, isC:false},          
+            { text:"说说你最兴奋的性幻想                                                                                 ",isA: false, isB: false, isC:false},          
+            { text:"用胸部隔着衣服轻轻摩擦上一位玩家的胸口或手臂，持续25秒。                                             ",isA: false, isB: false, isC:false},          
+            { text:"详细告诉大家你对足部玩法的真实想法和接受程度。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"独自保持双手举过头顶的姿势，让另外两人欣赏你的身体曲线。                                             ",isA: false, isB: false, isC:false},          
+            { text:"用舌尖在上一位玩家的锁骨上慢慢画圈舔弄。                                                             ",isA: false, isB: false, isC:false},          
+            { text:"分享你最敏感的三个身体部位，并解释为什么敏感。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"说说你最不敢说的性幻想                                                                               ",isA: false, isB: false, isC:false},          
+            { text:"独自换上丝袜或高跟鞋，在房间里走一圈展示。如果你是玩家一，请玩家2/3这样做                            ",isA: false, isB: false, isC:false},          
+            { text:"用嘴唇轻轻夹住上一位玩家的下唇，轻咬并拉扯几秒。                                                     ",isA: false, isB: false, isC:false},          
+            { text:"说说你的初体验、                                                                                     ",isA: false, isB: false, isC:false},          
+            { text:"独自跪在上一位玩家面前，把脸埋进对方胸口深深吸气。                                                   ",isA: false, isB: false, isC:false},          
+            { text:"用脚心隔着衣服轻轻按压上一位玩家的下体位置（只许轻压）。                                             ",isA: false, isB: false, isC:false},          
+            { text:"详细讨论你最想被上一位玩家用什么方式亲吻脖子和胸部。                                                 ",isA: false, isB: false, isC:false},          
+            { text:"独自脱掉胸罩，只用双手遮住胸部，保持害羞的姿势投骰两次，之后可以放手                                 ",isA: false, isB: false, isC:false},          
+            { text:"亲吻上一位玩家的腹部，从肚脐慢慢向下吻，但不超过腰带。                                               ",isA: false, isB: false, isC:false},          
+            { text:"分享你印象最深的性爱                                                                                 ",isA: false, isB: false, isC:false},          
+            { text:"三人一起：你们两人同时把脸贴近上一位玩家的下体位置（隔着裤子）。                                     ",isA: false, isB: false, isC:false},          
+            { text:"用舌头舔另一个女生的耳垂，持续15秒。                                                                 ",isA: false, isB: false, isC:false},          
+            { text:"邀请你上一位玩家摸你的腰和大腿内侧，并描述感受                                                       ",isA: false, isB: false, isC:false},          
+            { text:"光脚坐在地上，用脚趾给上一位玩家做简单的足部按摩。                                                   ",isA: false, isB: false, isC:false},          
+            { text:"在性中，你渴望的是什么？                                                                             ",isA: false, isB: false, isC:false},          
+            { text:"用胸部在上一位玩家的大腿上轻轻磨蹭，持续20秒。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"分享今晚你最期待被玩弄的部位和玩法。                                                                 ",isA: false, isB: false, isC:false},          
+            { text:"独自用舌头在上一位玩家的乳头位置隔着衣服轻轻画圈，持续20秒。                                         ",isA: false, isB: false, isC:false},          
+            { text:"详细描述你最喜欢被上一位玩家用什么姿势玩弄。                                                         ",isA: false, isB: false, isC:false},          
+            { text:"三人一起：你和另一个玩家同时亲吻上一位玩家的左右脸颊。                                               ",isA: false, isB: false, isC:false},          
+            { text:"独自脱掉内裤，换上情趣内裤或裸体展示给大家看。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"分享三人游戏中你最喜欢的场景。                                                                       ",isA: false, isB: false, isC:false},          
+            { text:"独自跪坐在上一位玩家面前，双手放在膝盖上，抬头对视30秒。如果你是玩家一，请玩家2/3这样做              ",isA: false, isB: false, isC:false},          
+            { text:"描述你最想被上一位玩家如何对待你的脚或被脚对待。                                                     ",isA: false, isB: false, isC:false},          
+            { text:"用胸部在上一位玩家的背上轻轻摩擦，持续25秒。                                                         ",isA: false, isB: false, isC:false},          
+            { text:"独自说出今晚你最害怕却又最期待被怎样羞耻地对待。如果你是玩家一，请玩家2/3这样做                      ",isA: false, isB: false, isC:false},          
+            { text:"告诉大家，你现在下面是什么感觉。                                                                     ",isA: false, isB: false, isC:false},          
+            { text:"光脚用脚趾夹住上一位玩家的手指，慢慢玩弄20秒。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"分享一个你曾经偷偷自慰时幻想过的三人场景。                                                           ",isA: false, isB: false, isC:false},          
+            { text:"独自把屁股对着上一位玩家，轻轻扭腰展示臀部曲线。                                                     ",isA: false, isB: false, isC:false},          
+            { text:"用舌尖沿着上一位玩家的脊背从上往下慢慢舔一次。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"描述你最喜欢被上一位玩家用语言怎么羞辱或夸奖。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"独自用手指隔着衣服按压自己的阴蒂位置，轻轻震动15秒给大家看。                                         ",isA: false, isB: false, isC:false},          
+            { text:"亲吻另一个女生的脖子，持续12秒。                                                                     ",isA: false, isB: false, isC:false},          
+            { text:"用脚背在上一位玩家的下体位置隔着裤子轻轻来回蹭动。                                                   ",isA: false, isB: false, isC:false},          
+            { text:"独自保持狗爬姿势10秒，让大家欣赏。如果你是玩家一，请玩家2/3这样做                                    ",isA: false, isB: false, isC:false},          
+            { text:"详细讨论你对被足交或足部侍奉的真实感受。                                                             ",isA: false, isB: false, isC:false},          
+            { text:"独自脱光上半身                                                                                       ",isA: false, isB: false, isC:false},          
+            { text:"分享如果你是三人里最听话的那一个，你会怎么表现。                                                     ",isA: false, isB: false, isC:false},          
+            { text:"请求上一位玩家亲吻你的大腿内侧。                                                                     ",isA: false, isB: false, isC:false},          
+            { text:"光脚把一只脚抬起来，让上一位玩家亲吻脚背。                                                           ",isA: false, isB: false, isC:false},          
+            { text:"描述你最想看到的上一位玩家对你做什么色情的事。                                                       ",isA: false, isB: false, isC:false},          
+            { text:"跪下，把脸贴在上一位玩家的腿上轻轻蹭。如果你是玩家一，请玩家2/3这样做                                ",isA: false, isB: false, isC:false},          
+            { text:"用手指隔着衣服在上一位玩家阴部上方位置按压震动20秒。                                                 ",isA: false, isB: false, isC:false},          
+            { text:"分享你对“被命令”和“主动侍奉”哪一种更兴奋。                                                           ",isA: false, isB: false, isC:false},          
+            { text:"用舌头和嘴唇侍奉上一位玩家的另一只手，像口交一样。                                                   ",isA: false, isB: false, isC:false},          
+            { text:"描述被上一位玩家和另一个女生一起看着自慰是什么感觉。                                                      ",isA: false, isB: false, isC:false},     
+            { text:"用脚心在上一位玩家的胸口轻轻踩踏并慢慢移动。                                                              ",isA: false, isB: false, isC:false},     
+            { text:"分享一个你特别想尝试的BDSM玩法。                                                                          ",isA: false, isB: false, isC:false},     
+            { text:"描述你最喜欢被怎样控制高潮或被寸止。                                                                      ",isA: false, isB: false, isC:false},     
+            { text:"独自脱掉所有衣服，只用双手遮住重要部位展示给大家。维持害羞的状态两个回合。如果你是玩家一，请玩家2/3这样做 ",isA: false, isB: false, isC:false},     
+            { text:"分享如果你被人胁迫或控制，你最愿意接受什么惩罚。                                                          ",isA: false, isB: false, isC:false},     
+            { text:"跪在上一位玩家面前，让对方抚摸你的屁股。如果你是玩家一，请玩家2/3这样做                                   ",isA: false, isB: false, isC:false},     
+            { text:"弯腰，把屁股对着上一位玩家展示。如果你是玩家一，请玩家2/3这样做                                           ",isA: false, isB: false, isC:false},     
+            { text:"请玩家一用肉棒摩擦你的阴唇，但是不插入，如果你是玩家一，对玩家2/3轮流这么做                               ",isA: false, isB: false, isC:false} 
+        ],
+        2: [
+          { text:"用嘴巴隔着内裤给上一位玩家口交，持续40秒，然后将ta的内裤脱掉继续。                                      ",isA: false, isB: false, isC:false},     
+          { text:"把震动玩具贴上下体，保持1轮并描述感觉。                                                                 ",isA: false, isB: false, isC:false},     
+          { text:"给男生深喉口交，直到流口水，然后骑乘位坐上去摇动20下。如果你是玩家一，请玩家2/3轮流这样做               ",isA: false, isB: false, isC:false},     
+          { text:"详细描述你现在最想被上一位玩家用什么激烈姿势猛干。                                                      ",isA: false, isB: false, isC:false},     
+          { text:"用玩具把自己刺激到高潮边缘，立刻停止（寸止1次）。如果你是玩家一，请玩家2/3轮流这样做                    ",isA: false, isB: false, isC:false},     
+          { text:"跪在上一位玩家面前，用嘴巴侍奉肉棒，然后转身后入插入10下。如果你是玩家一，请玩家2/3轮流这样做           ",isA: false, isB: false, isC:false},     
+          { text:"脱光衣服，只穿袜子                                                                                      ",isA: false, isB: false, isC:false},     
+          { text:"给上一位玩家口交的同时，被另一个女生用手刺激你的下体。                                                  ",isA: false, isB: false, isC:false},     
+          { text:"用玩具刺激自己，直到接近高潮再停止。如果你是玩家一，请玩家2/3轮流这样做                                 ",isA: false, isB: false, isC:false},     
+          { text:"三人一起：同时用嘴巴侍奉玩家一的肉棒，直到完全勃起。                                                    ",isA: false, isB: false, isC:false},     
+          { text:"给玩家一口交时看着眼睛说淫语，然后被插入阴道猛干20下。如果你是玩家一，请玩家2/3轮流这样做               ",isA: false, isB: false, isC:false},     
+          { text:"骑在玩家一大腿上磨蹭，然后转成骑乘位插入。如果你是玩家一，请玩家2/3轮流这样做                           ",isA: false, isB: false, isC:false},     
+          { text:"被上一位玩家手指同时插入阴道和肛门快速抽插30秒。如果你是玩家一，对玩家2/3同时这样做                     ",isA: false, isB: false, isC:false},     
+          { text:"帮上一位女玩家进行寸止：刺激到高潮边缘，至少重复2次。                                                   ",isA: false, isB: false, isC:false},     
+          { text:"用舌头给上一位玩家舔肛的同时，被他手指猛抠阴道。如果你是玩家一，请玩家2/3相互这样做                     ",isA: false, isB: false, isC:false},     
+          { text:"穿开档丝袜，张开腿请玩家一直接插入抽插30秒。如果你就是玩家一，对下一位玩家这么做                        ",isA: false, isB: false, isC:false},     
+          { text:"给上一位玩家乳交。如果你是玩家一，用你的胸蹭对方的胸                                                    ",isA: false, isB: false, isC:false},     
+          { text:"三人一起：轮流深喉玩家一的肉棒。假装得很急迫，都想吃到最深                                              ",isA: false, isB: false, isC:false},     
+          { text:"站立开腿，自己用最大档震动棒阴蒂，直到腿软（不准高潮）。                                                ",isA: false, isB: false, isC:false},     
+          { text:"跪着让上一位玩家从后面猛干或舔舐，同时另一个女生吮吸乳头。                                              ",isA: false, isB: false, isC:false},     
+          { text:"描述被玩到高潮边缘却被寸止的感觉。                                                                      ",isA: false, isB: false, isC:false},     
+          { text:"保持M字开腿，用玩具抽插到边缘再停下。如果你是玩家一，选一个玩家这样做                                   ",isA: false, isB: false, isC:false},     
+          { text:"用嘴巴同时侍奉玩家一的肉棒和另一个女生的阴部。如果你是玩家一，指定被你插入的人                          ",isA: false, isB: false, isC:false},     
+          { text:"给上一位玩家口交时，被另一个女生从后面用玩具插入或舔舐                                                  ",isA: false, isB: false, isC:false},     
+          { text:"骑乘位坐在上一位玩家脸上被舔阴。                                                                        ",isA: false, isB: false, isC:false},     
+          { text:"三人一起：同时把脸贴近上一位玩家下体轮流口交。                                                          ",isA: false, isB: false, isC:false},     
+          { text:"把跳蛋塞进阴道，中高档保持1轮。如果你是玩家一，指定这么做的人                                           ",isA: false, isB: false, isC:false},     
+          { text:"被玩家一后入猛干20下，必须大声数出来。如果你是玩家一，指定这么做的人                                    ",isA: false, isB: false, isC:false},     
+          { text:"给另一位女生示范如何给肉棒口交，交流技巧  如果你是玩家一，指定这么做的人                                ",isA: false, isB: false, isC:false},     
+          { text:"给上一位玩家口交，同时被另一个女生口交。                                                                ",isA: false, isB: false, isC:false},     
+          { text:"进行边缘控制：快高潮时停下，重复1次。如果你是玩家一，由你来控制                                         ",isA: false, isB: false, isC:false},     
+          { text:"进行边缘控制：快高潮时停下，重复2次。如果你是玩家一，由你来控制                                         ",isA: false, isB: false, isC:false},     
+          { text:"进行边缘控制：快高潮时停下，重复3次。如果你是玩家一，由你来控制                                         ",isA: false, isB: false, isC:false},     
+          { text:"跪在玩家一面前，请求他用肉棒抽打脸和舌头，然后插入嘴巴。表现得很饥渴，好像那是世上最好吃的东西  如果你是玩家一，指定这么做的人         ",isA: false, isB: false, isC:false},     
+          { text:"用阴部在上一位玩家大腿上磨蹭湿透后，表达自己的状态，祈求并直接被手指或肉棒插入。 如果你是玩家一，指定这么做的人                       ",isA: false, isB: false, isC:false},     
+          { text:"三人一起：两名女生互相舌吻和亲乳头，同时被玩家一轮流插入。                                              ",isA: false, isB: false, isC:false},     
+          { text:"戴眼罩，被另两位玩家同时刺激。                                                                          ",isA: false, isB: false, isC:false},     
+          { text:"给玩家一深喉到流眼泪，假装被强迫                                                                        ",isA: false, isB: false, isC:false},     
+          { text:"把双头龙一端插进自己阴道，另一端留在外面三回合。如果涉及到与另一个人的口交/插入，你必须用这一端执行 如果你是玩家一，指定这么做的人    ",isA: false, isB: false, isC:false},     
+          { text:"被上一位玩家后入用假阳或肉棒猛干，同时必须挺直上身。 如果你是玩家一，指定这么做的人                                                   ",isA: false, isB: false, isC:false},     
+          { text:"跪着让上一位玩家把肉棒像操阴道一样在嘴里抽插。假装被强迫并反抗 如果你是玩家一，指定这么做的人                                         ",isA: false, isB: false, isC:false},     
+          { text:"描述你最想被寸止多少次后再被猛干。如果你是玩家一，请玩家2/3轮流这样做                                                                      ",isA: false, isB: false, isC:false},     
+          { text:"三人一起：两人同时用舌头舔上一位玩家的全身。发出吮吸的声音                                              ",isA: false, isB: false, isC:false},     
+          { text:"被/把上一位玩家手指快速抠到边缘。被刺激的人必须表现地很想高潮并哀求                                     ",isA: false, isB: false, isC:false},     
+          { text:"给上一位玩家口交，同时被另一个女生用玩具插入阴道或舔舐。                                                      ",isA: false, isB: false, isC:false},     
+          { text:"保持狗爬姿势，被/把上一位玩家从后面大力抽插。声音平稳地报数                                             ",isA: false, isB: false, isC:false},     
+          { text:"给另一个女生口交的同时，被玩家一从后面猛干阴道。声音平稳地报数  如果你是玩家一，指定这么做的人                                        ",isA: false, isB: false, isC:false},     
+          { text:"用吸阴器吸住阴蒂最大档20秒，同时被上一位玩家插入，禁止高潮。 如果你就是玩家一，对上一位玩家这么做                                           ",isA: false, isB: false, isC:false},     
+          { text:"两个女生互相用玩具玩到边缘。禁止呻吟和大喘气，语调平稳地说出：我要高潮了，请不要玩弄我的骚逼了          ",isA: false, isB: false, isC:false},     
+          { text:"被/把上一位玩家猛干15下，假装自己在被强奸反抗，同时求饶。另一位玩家扮演帮凶，摁住她                     ",isA: false, isB: false, isC:false},     
+          { text:"请大家捏/爱抚自己的乳头                                                                                 ",isA: false, isB: false, isC:false},     
+          { text:"用舌头激烈侍奉上一位玩家的下体，必须发出响亮的声音。                                                    ",isA: false, isB: false, isC:false},     
+          { text:"给上一位玩家口交，保持双手背在身后。                                                                    ",isA: false, isB: false, isC:false},     
+          { text:"寸止1次，最后一次寸止时毁灭高潮。如果你是玩家一，由你来控制                                             ",isA: false, isB: false, isC:false},     
+          { text:"寸止2次，最后一次寸止时毁灭高潮。如果你是玩家一，由你来控制                                             ",isA: false, isB: false, isC:false},     
+          { text:"寸止3次，最后一次寸止时毁灭高潮。如果你是玩家一，由你来控制                                             ",isA: false, isB: false, isC:false},     
+          { text:"被玩家一按在床上后入猛干，同时另一个女生按住你的头强吻。  如果你就是玩家一，对上一位玩家这么做                                              ",isA: false, isB: false, isC:false},     
+          { text:"用假阳+吮吸道具玩弄自己到边缘，然后换成真实肉棒。  如果你就是玩家一，对下一位玩家这么做                                                     ",isA: false, isB: false, isC:false},     
+          { text:"三人一起：两个女生同时张嘴，玩家一同时抽插两张嘴巴。                                                    ",isA: false, isB: false, isC:false},     
+          { text:"跪着掰开下体，请求玩家一用肉棒拍打阴部，然后直接插入。                                                  ",isA: false, isB: false, isC:false},     
+          { text:"三人一起：两个女生趴在一起，请玩家一在两穴之间抽插。                                                    ",isA: false, isB: false, isC:false},     
+          { text:"被玩家一和另一个女生一起用舌头和肉棒玩弄。  如果你是玩家一，指定这么做的人                                                            ",isA: false, isB: false, isC:false},     
+          { text:"用阴唇夹住玩家一的肉棒摩擦，然后被完全插入。 如果你是玩家一，指定这么做的人                                                           ",isA: false, isB: false, isC:false},     
+          { text:"描述自己敏感的部位，同时一边刺激一边说请大家观看自己自慰，同时自慰到边缘。                              ",isA: false, isB: false, isC:false},     
+          { text:"给上一位玩家足交时被另一个女生轻扇耳光/吻脸颊。                                                         ",isA: false, isB: false, isC:false},     
+          { text:"躺在床的边缘，上身垂下分开双腿，被上一位玩家站立插入或刺激下体。 如果你就是玩家一，对上一位玩家这么做                                       ",isA: false, isB: false, isC:false},     
+          { text:"三人一起：你和另一个女生互相69，上一位玩家从后面轮流插入或舔舐。                                        ",isA: false, isB: false, isC:false},     
+          { text:"被另一位/上一位玩家用粗玩具猛插阴道直到求饶，然后换肉棒。                                               ",isA: false, isB: false, isC:false},     
+          { text:"用手掌拍打自己的阴部10下，同时表达自己因为流水太多而被惩罚。如果你是玩家一，请玩家2/3同时这样做         ",isA: false, isB: false, isC:false},     
+          { text:"给上一位玩家深喉/舔舐，同时被另一个女生刺激下体。                                                               ",isA: false, isB: false, isC:false},  
+          { text:"被蒙眼猜是谁在给你口交。                                                                                   ",isA: false, isB: false, isC:false},  
+          { text:"把自己的手指塞进后穴，再被肉棒插入阴道（轻度双洞）。如果你是玩家一，对下一位玩家这样做                     ",isA: false, isB: false, isC:false},  
+          { text:"给另一个女生口交，同时被上一位玩家舔舐后穴。                                                               ",isA: false, isB: false, isC:false},  
+          { text:"三人一起：两个女生并排翘臀，让玩家一轮流抽插阴道。                                                         ",isA: false, isB: false, isC:false},  
+          { text:"进行高潮控制：边缘3次后再被猛烈性交。如果你是玩家一，请玩家2/3轮流这样做                                   ",isA: false, isB: false, isC:false},  
+          { text:"请玩家一从背面操，同时另一个女生舔结合处。做的同时描述你的感受    如果你就是玩家一，对上一位玩家这么做                                          ",isA: false, isB: false, isC:false},  
+          { text:"用舌头给上一位玩家做足部侍奉的同时，被从后面插入/舔舐。                                                    ",isA: false, isB: false, isC:false},  
+          { text:"打开房间的灯，在窗边站立张开双腿自慰，寸止一次。如果你是玩家一，请玩家2/3同时这样做，先寸止的人可以被你插  ",isA: false, isB: false, isC:true}, 
+          { text:"被上一位玩家手指同时插前后穴。如果你是玩家一，请玩家2/3同时撅起来，被你这样做                              ",isA: false, isB: false, isC:false},  
+          { text:"三人一起：两个女生同时用胸部夹住玩家一的肉棒。                                                             ",isA: false, isB: false, isC:false},  
+          { text:"给上一位玩家口交，同时评论ta的口感。如果你是女生，同时必须摇屁股像在祈求被操一样                           ",isA: false, isB: false, isC:false},  
+          { text:"体验使用手指的轻度扩张。如果你是玩家一，如果你是玩家一，对玩家2/3同时这样做，并评论扩张前后的使用感受差异  ",isA: false, isB: false, isC:false},  
+          { text:"描述并演示你很期待进行性行为时的神态和动作                                                                 ",isA: false, isB: false, isC:false},  
+          { text:"三人一起：两个女生同时仰面撑起屁股，用下体夹住玩家一的肉棒，套弄侍奉1分钟。                                ",isA: false, isB: false, isC:false},  
+          { text:"让自己湿润或勃起，准备好插入或被插入。                                                                     ",isA: false, isB: false, isC:false},  
+          { text:"让自己湿润或勃起，准备好插入或被插入。                                                                     ",isA: false, isB: false, isC:false},  
+          { text:"让自己湿润或勃起，准备好插入或被插入。                                                                     ",isA: false, isB: false, isC:false},  
+          { text:"被上一位玩家轻抽屁股和乳房到微红。如果你是玩家一，请玩家2/3相互这样做                                      ",isA: false, isB: false, isC:false},  
+          { text:"给另两位玩家轮流口交。                                                                                     ",isA: false, isB: false, isC:false},  
+          { text:"把小玩具调到最高档放在下体，语调平静地念出一首古诗。 如果你是玩家一，指定这么做的人                                                       ",isA: false, isB: false, isC:false},  
+          { text:"三人一起：两个女生互相深吻，同时被玩家一的手指玩弄。                                                       ",isA: false, isB: false, isC:false},  
+          { text:"躺在床上搂住膝盖，被/将上一位玩家玩到2次寸止，并且感谢ta。                                                 ",isA: false, isB: false, isC:false},  
+          { text:"用舌头尝试舔自己的胸部。若不成功，舔舐其他玩家的胸部代替。                                                 ",isA: false, isB: false, isC:false},  
+          { text:"想象你被三人同时填满所有洞时的激烈感觉。如果你是玩家1，讨论一下你对多人游戏的感受                          ",isA: false, isB: false, isC:false},                   
+        ],
+        3: [
+          { text:"两个玩家轮流给你足交，每次只能持续15秒，互相竞争谁的脚技更让你舒服。                                                ",isA: false, isB: false, isC:false},
+          { text:"你躺在中间，一个玩家用嘴侍奉你的上半身（乳头、脖子），另一个玩家用脚玩弄你的下体。                                  ",isA: false, isB: false, isC:false},
+          { text:"为玩家一进行前后双人口交。猜拳决定，赢的人在后面                                                                    ",isA: false, isB: false, isC:false},
+          { text:"三人多人口交：两个女生同时用嘴和舌头侍奉玩家一的肉棒和蛋蛋                                                          ",isA: false, isB: false, isC:false},
+          { text:"玩家一用一只脚踩在一个女生头上，命令她给另一个女生口交。猜拳决定，赢的人被踩                                        ",isA: false, isB: false, isC:false},
+          { text:"一位女生骑在玩家一脸上让他舔她，她必须同时用手侍奉另一个女生。                                                      ",isA: false, isB: false, isC:false},
+          { text:"两个女生面对面跪着，用脚底互相摩擦对方的阴部。                                                                      ",isA: false, isB: false, isC:false},
+          { text:"深喉挑战：两个女生轮流尝试把玩家一的肉棒吞到最深，谁更深谁可以亲玩家一10秒。                                        ",isA: false, isB: false, isC:false},
+          { text:"足部崇拜时间：两个女生一起撅起屁股面对着玩家一，同时跪趴着舔玩家一的脚，同时被手随意玩弄她们的身体。                ",isA: false, isB: false, isC:false},
+          { text:"一位女生被你从后面插入，她必须同时用舌头舔另一个玩家的下体。                                                        ",isA: false, isB: false, isC:false},
+          { text:"两个女生用四只脚夹住你的肉棒，进行慢速多人足交。                                                                    ",isA: false, isB: false, isC:false},
+          { text:"你坐着，一个女生跪在你两腿之间口交，玩家用脚踩在你脸上。                                                            ",isA: false, isB: false, isC:false},
+          { text:"两个女生同时用舌头舔玩家一的肉棒，从根部一直舔到顶端，在顶端含着它接吻。                                            ",isA: false, isB: false, isC:false},
+          { text:"一个女生给你口交，另一个女生用脚把她的头按得更深。猜拳决定，赢的人负责踩                                            ",isA: false, isB: false, isC:false},
+          { text:"两个女生用嘴和脚同时侍奉玩家一，猜拳决定，赢的人用嘴。                                                              ",isA: false, isB: false, isC:false},
+          { text:"命令上一位玩家用脚踩在另一个玩家的胸上，同时你去舔舐ta的胸                                                          ",isA: false, isB: false, isC:false},
+          { text:"叠罗汉性爱：两位女生面对面抱住对方，拥吻的同时张开双腿被操                                                          ",isA: false, isB: false, isC:false},
+          { text:"角色扮演：性爱玩偶。猜拳决定，赢的女生摆好姿势假装性爱玩偶，禁止移动/发声。接收另外两位玩家的玩弄。                 ",isA: false, isB: false, isC:false},
+          { text:"角色扮演：孕奴。猜拳决定，赢的女生被玩家一艹30下，一边被操一一边祈求内射                                            ",isA: false, isB: false, isC:false},
+          { text:"角色扮演：肉便器。猜拳决定，赢的女生假装自己是肉便器，讲述自己身上各个部位的作用并请大家欣赏。                      ",isA: false, isB: false, isC:false},
+          { text:"角色扮演：宠物。猜拳决定，赢的女生假装是小狗，请另一位女生对她进行一些简单的犬艺调教。请在结束的时候夸夸它哟        ",isA: false, isB: false, isC:false},
+          { text:"角色扮演：小玩具推销员。猜拳决定，赢的女生拿起三个不同的小玩具，讲解用法并且示范。至少达到一次寸止                  ",isA: false, isB: false, isC:false},
+          { text:"角色扮演：淑女。猜拳决定，赢的女生端庄地跪好，假装她是一位淑女，举动优雅并且游戏中只许轻声呻吟。地持续两个回合。    ",isA: false, isB: false, isC:false},
+          { text:"双人口交：两个女生同时含住玩家一的肉棒，配合默契地同时刺激杆或龟头。                                                ",isA: false, isB: false, isC:false},
+          { text:"三人全身摩擦：两个玩家用身体紧紧贴着你，爱抚并摩擦。                                                                ",isA: false, isB: false, isC:false},
+          { text:"一个女生骑乘在玩家一身上，另一个女生坐在玩家一脸上，进行一段性爱                                                    ",isA: false, isB: false, isC:false},
+          { text:"用丝袜或绳子轻度绑住一个女生的双手，让另一个女生尽情挑逗她。                                                        ",isA: false, isB: false, isC:false},
+          { text:"脚部3P：玩家一的肉棒被两双脚紧紧夹在中间，进行缓慢而淫荡的摩擦。                                                    ",isA: false, isB: false, isC:false},
+          { text:"你从后面插入一个女生，另一个玩家躺在下面，用舌头舔你们结合的部位。                                                  ",isA: false, isB: false, isC:false},
+          { text:"两个女生并排躺下，玩家一轮流插入她们，观察谁的表情更骚。                                                            ",isA: false, isB: false, isC:false},
+          { text:"上一位女生必须骑在玩家一身上，同时用手把另一个女生的头按到你们结合处。                                              ",isA: false, isB: false, isC:false},
+          { text:"三人口交链：共同躺在床上进行一次循环口交。                                                                          ",isA: false, isB: false, isC:false},
+          { text:"两个女生互相用手指试图把对方弄到高潮边缘。                                                                          ",isA: false, isB: false, isC:false},
+          { text:"上一位女生躺在床上被玩家一插入，另一位坐在她脸上。                                                                  ",isA: false, isB: false, isC:false},
+          { text:"用脚控制：玩家一用脚踩住上一位女生的头，让她用嘴侍奉另一个女生。                                                    ",isA: false, isB: false, isC:false},
+          { text:"两个女生叠在一起，你从上面轮流插入不同穴位。                                                                        ",isA: false, isB: false, isC:false},
+          { text:"一位女生自慰到高潮，另一位女生为此感谢玩家一。                                                                      ",isA: false, isB: false, isC:false},
+          { text:"两个女生同时坐在玩家一两条腿上，一左一右慢慢扭腰磨蹭，互相亲吻对方。                                                ",isA: false, isB: false, isC:false},
+          { text:"猜拳决定，玩家一操胜利的女生，另一个女生必须用舌头不停舔你的蛋蛋和会阴。                                            ",isA: false, isB: false, isC:false},
+          { text:"蒙眼3P：玩家一被蒙眼，两个女生轮流骑乘或口交，你要猜出当前是谁。                                                    ",isA: false, isB: false, isC:false},
+          { text:"猜拳决定：赢的女生站立弯腰，另一个覆在她身上抱住她的腰，固定她让玩家一更容易深插猛操。同时张嘴等着被当作润滑        ",isA: false, isB: false, isC:false},
+          { text:"猜拳决定：赢的女生跪姿撅起来，另一个覆在她身上抱住她的腰，固定她让玩家一更容易深插猛操。同时张嘴等着被当作润滑      ",isA: false, isB: false, isC:false},
+          { text:"两个女生面对面跪趴，玩家一轮流从后面插入，比较谁的叫声更骚。                                                      ",isA: false, isB: true, isC:false},
+          { text:"命令两个女生互相用手指或玩具把对方弄到高潮边缘。                                                                    ",isA: false, isB: false, isC:false},
+          { text:"两个女生69，玩家一在后面轮流插入她们。并张开嘴等待被当作润滑                                                        ",isA: false, isB: false, isC:false},
+          { text:"操一个女生，同时她需要亲吻另一个玩家的脚底。                                                                        ",isA: false, isB: false, isC:false},
+          { text:"上一个女生用手掰开另一个女生的阴唇，让玩家一看得更清楚再插入。                                                      ",isA: false, isB: false, isC:false},
+          { text:"雌竞台词：两个女生必须轮流说谁更想被你操，谁的逼更痒。                                                            ",isA: false, isB: true, isC:false},
+          { text:"两个女生用身体把玩家一完全包裹住，进行全身肉体摩擦。                                                                ",isA: false, isB: false, isC:false},
+          { text:"高潮接力：上一个女生一边使用小玩具一边被操。高潮后，立刻换下一个继续。重复2轮                                       ",isA: false, isB: false, isC:false},
+          { text:"两个女生一起用嘴含住玩家一的肉棒，像接吻一样互相舌吻他的龟头。                                                      ",isA: false, isB: false, isC:false},
+          { text:"玩家一从后面抱住上一个女生插入，另一个女生跪在前面张开腿被她舔阴。                                                  ",isA: false, isB: false, isC:false},
+          { text:"命令一个女生用脚踩住另一个女生的头，你从后面操踩人的那个。                                                          ",isA: false, isB: false, isC:false},
+          { text:"两个女生背靠背坐着，玩家一轮流使用她们的嘴巴。                                                                      ",isA: false, isB: false, isC:false},
+          { text:"上一位女生必须用最骚的声音求玩家一操另一个女生给她看。                                                            ",isA: false, isB: true, isC:false},
+          { text:"上一个女生站立被玩家一操到腿软，另一个女生必须扶着她继续被操。                                                      ",isA: false, isB: false, isC:false},
+          { text:"蒙眼足交：两个女生用脚侍奉玩家一，玩家一来猜哪双脚属于谁。                                                          ",isA: false, isB: false, isC:false},
+          { text:"两个女生互相69姿势亲吻乳头，同时揉对方的阴蒂                                                                        ",isA: false, isB: false, isC:false},
+          { text:"上一位女生骑乘玩家一，另一个女生必须从后面抱住她一起上下动。                                                        ",isA: false, isB: false, isC:false},
+          { text:"玩家一躺在中间，两个女生分别用嘴和脚同时侍奉他的上下身（舔乳首和足交）。                                            ",isA: false, isB: false, isC:false},
+          { text:"另外两个玩家用舌头一起舔你的全身，从脚趾一直舔到脖子。                                                              ",isA: false, isB: false, isC:false},
+          { text:"玩家一操上一个女生，同时另一个女生必须用手指和舌头玩弄她的菊花。                                                    ",isA: false, isB: false, isC:false},
+          { text:"三人滚床单：完全放开地互相亲吻、触摸、摩擦。                                                                        ",isA: false, isB: false, isC:false},
+          { text:"玩家一操上一个女生，她必须大声喊出另一个女生的名字。                                                                ",isA: false, isB: false, isC:false},
+          { text:"两个女生面对面抱着接吻，玩家一从后面轮流插入。                                                                      ",isA: false, isB: false, isC:false},
+          { text:"双人乳交：两个女生一起跪着，用四只乳房夹住玩家一的肉棒套弄。                                                        ",isA: false, isB: false, isC:false},
+          { text:"上一个女生被玩家一猛操，另一个女生负责亲吻他的嘴唇分散注意力。                                                      ",isA: false, isB: false, isC:false},
+          { text:"玩家一坐着，两个女生一左一右用脚同时给他足交。                                                                      ",isA: false, isB: false, isC:false},
+          { text:"接下来的游戏中，两个女生必须互相用嘴清理对方被玩家一操过后的穴。                                                    ",isA: false, isB: false, isC:false},
+          { text:"上一位女生必须描述她看到玩家一操另一个女生时的兴奋感。                                                              ",isA: false, isB: false, isC:false},
+          { text:"上一个女生可以控制另一个女生的高潮，接下来的游戏中，寸止的时候如果对方允许，则可以高潮                              ",isA: false, isB: false, isC:false},
+          { text:"游戏结束时，在玩家一射精后，sub吃下精液后两位女生接吻。                                                             ",isA: false, isB: false, isC:false},
+          { text:"两个女生同时亲吻玩家一的肉棒，像在进行法式湿吻。                                                                    ",isA: false, isB: false, isC:false},
+          { text:"两位玩家同时亲吻上一位女生的乳头，像在进行法式湿吻。                                                                ",isA: false, isB: false, isC:false}                   
+        ]
+      },
+    
+      taskSub: {
+        1: [
+          { text:"跪在上一位玩家面前，低声说自己愿意被主人当成最听话的玩具使用。         ",isA: false, isB: true, isC:false}, 
+          { text:"看着Vanilla的眼睛，主动承认自己比她更贱、更想被玩。                    ",isA: false, isB: true, isC:false}, 
+          { text:"趴在上一位玩家腿上，轻轻扭动屁股，请求对方随意拍打。                   ",isA: false, isB: false, isC:false},
+          { text:"用舌头仔细舔上主人的脚趾，同时让Vanilla在一旁看着。                    ",isA: false, isB: false, isC:false},
+          { text:"把脸紧紧贴在上一位玩家的胯部，呼吸着说她现在很想要。                   ",isA: false, isB: false, isC:false},
+          { text:"主动脱掉内裤，跪着分开双腿展示给主人和Vanilla看。                      ",isA: false, isB: false, isC:false},
+          { text:"跪在地上，用自己的脚心反复摩擦Vanilla的脚，并低声说自己喜欢做这种事。  ",isA: false, isB: false, isC:false},
+          { text:"挺胸跪坐在主人面前，让Vanilla也一起欣赏她的身体。                      ",isA: false, isB: false, isC:false},
+          { text:"主动拉着主人的手放到自己大腿最内侧，求对方感受她的湿润。               ",isA: false, isB: false, isC:false},
+          { text:"爬到主人面前，高高翘起屁股扭动，同时让Vanilla看着。                    ",isA: false, isB: false, isC:false},
+          { text:"看着Vanilla，说出她愿意做任何卑微的事来证明自己更听话。                ",isA: false, isB: true, isC:false}, 
+          { text:"用舌头在上一位玩家大腿内侧慢慢舔弄，同时轻声感谢主人。                 ",isA: false, isB: false, isC:false},
+          { text:"必须主动告诉大家，她最怕被怎样羞辱，但又很期待。                       ",isA: false, isB: false, isC:false},
+          { text:"跪在主人脚边，亲吻对方的脚背，同时让Vanilla在一旁观看。                ",isA: false, isB: false, isC:false},
+          { text:"跪在主人面前，主动把Vanilla叫过来一起欣赏她现在的下贱模样。            ",isA: false, isB: false, isC:false},
+          { text:"必须当着Vanilla的面，用舌头把主人的脚彻底舔湿，并说自己很适合做这种事。",isA: false, isB: false, isC:false},
+          { text:"趴在地上，高高翘起屁股求主人sp，同时请求Vanilla帮忙按住她的腰。        ",isA: false, isB: false, isC:false},
+          { text:"看着Vanilla的眼睛，低声承认自己其实很享受被比下去的感觉。              ",isA: false, isB: true, isC:false}, 
+          { text:"把上一位玩家的手拉到自己胸部上，求对方用力揉捏，同时让Vanilla看着。    ",isA: false, isB: false, isC:false},
+          { text:"跪着爬到Vanilla脚边，轻轻亲吻她的脚背，表达自己愿意让主人多玩玩她。    ",isA: false, isB: true, isC:false}, 
+          { text:"主动脱光衣服，跪在主人和Vanilla中间，请求他们一起点评她的身体。        ",isA: false, isB: false, isC:false},
+          { text:"用卑微的声音求主人今晚先好好玩Vanilla，而她可以在旁边伺候。            ",isA: false, isB: true, isC:false}, 
+          { text:"把脸埋在主人的胯部，深深吸气，同时让Vanilla在一旁轻声辱骂嘲笑她。      ",isA: false, isB: true, isC:false}, 
+          { text:"必须用舌头在Vanilla的大腿内侧舔出一道湿痕，证明自己听话。              ",isA: false, isB: false, isC:false},
+          { text:"跪坐着把双腿张开，求主人和Vanilla一起看她湿了的痕迹。                  ",isA: false, isB: false, isC:false},
+          { text:"主动提出要用自己的脚给主人足交，同时请Vanilla监督她是否够认真。        ",isA: false, isB: false, isC:false},
+          { text:"低着头告诉主人，她愿意被Vanilla和主人一起欺负，只要能取悦主人。        ",isA: false, isB: true, isC:false}, 
+          { text:"用胸部在主人腿上磨蹭的同时，转头对Vanilla说“今晚我不会跟你抢太多的”。  ",isA: false, isB: true, isC:false}, 
+          { text:"爬到主人脚下，让主人用脚玩弄，邀请Vanilla观看下贱的样子。              ",isA: false, isB: false, isC:false},
+          { text:"当着Vanilla的面，磕头祈求主人今晚把她当玩具随意使用。                  ",isA: false, isB: false, isC:false}
+        ],
+        2: [
+          { text:"Sub跪在主人面前，请求主人和Vanilla做爱，她负责在旁边侍奉。并描述此时的感受         " ,isA: false, isB: true, isC:false},  
+          { text:"Sub请求Vanilla，若得到允许，下一次sub的寸止可以改为高潮。                          " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub趴在床上高翘屁股，请Vanilla掰开她的臀部，让主人后入猛干。                       " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub用舌头仔细侍奉主人的肉棒，同时让Vanilla观看，讲解主人的侍奉喜好                 " ,isA: false, isB: true, isC:false},  
+          { text:"Sub跪在地上，主动承认自己比Vanilla在主人面前地位更低。                             " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub用舌头侍奉Vanilla的阴部，直到得到对方的赞许。                                   " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub大声说“贱狗只是主人的肉玩具，请对Vanilla更温柔”。                               " ,isA: false, isB: true, isC:false},  
+          { text:"Sub被寸止时，Vanilla在顶点时抽打她的下体，帮忙控制她不准高潮。                     " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub爬到Vanilla脚边亲吻她的脚，并感谢Vanilla愿意陪他们一起玩，表达自己更贱该被忽视  " ,isA: false, isB: true, isC:false},  
+          { text:"Sub保持狗爬姿势，让主人和Vanilla一起随意玩弄她。                                   " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub乞求主人用粗玩具猛插她，同时让Vanilla扇她耳光。                                 " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub主动要求被寸止更多次来证明自己耐操。Sub的本局游戏寸止次数+1                     " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub当着Vanilla的面，表演如何祈求主人使用。                                         " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub被主人摁住双手，挺胸请求Vanilla折磨乳首。                                       " ,isA: false, isB: false, isC:false}, 
+          { text:"主人进入Vanilla，Sub用舌头给两人舔肛。                                             " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub承认自己喜欢看着Vanilla和主人做爱。                                             " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub被连续寸止3次，寸止时看着Vanilla说“她比我更值得被操”。                          " ,isA: false, isB: true, isC:false},  
+          { text:"Sub主动大开双腿，请Vanilla随意玩弄。                                               " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub用嘴巴侍奉主人的脚，同时被Vanilla用玩具玩弄。                                   " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub对Vanilla磕头，乞求结束后让Vanilla先被猛干，她最后被使用。                      " ,isA: false, isB: true, isC:false},  
+          { text:"Sub保持M字开腿，同时Vanilla用玩具玩弄阴蒂并被主人插入。                            " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub用最下贱姿势摇屁股，求主人和Vanilla一起玩弄她。                                 " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub被主人操一分钟，同时大声感谢Vanilla陪主人玩她。                                 " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub跪着把Vanilla的阴部舔湿，再请主人进入她。                                       " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub进行2次寸止，同时必须说“母狗不配舒服地高潮”。                                   " ,isA: false, isB: false, isC:false}, 
+          { text:"Sub喝一口主人的圣水。                                                              " ,isA: true, isB: false, isC:false},  
+          { text:"Sub用圣水漱口。                                                                    " ,isA: true, isB: false, isC:false},  
+          { text:"Sub将主人的圣水涂在脸上。并请Vanilla嗅闻                                           " ,isA: true, isB: false, isC:false}
+        ],
+        3: [
+          { text:"看着 Vanilla 被主人操，必须一直重复“我好羡慕她被主人操得好爽”。               ",isA: false, isB: true, isC:false},  
+          { text:"舔 Vanilla 的脚，同时被主人从后面猛烈插入。                                   ",isA: false, isB: false, isC:false}, 
+          { text:"被 Vanilla 骑在脸上，主人操那个她时，sub必须伸舌头舔干净所有流下的淫水。      ",isA: false, isB: false, isC:false}, 
+          { text:"sub的双手被 Vanilla 用力按住，让主人随意操，同时被 Vanilla 语言女绿羞辱。     ",isA: false, isB: true, isC:false},  
+          { text:"sub必须跪着亲吻 Vanilla 的脚，祈求她允许自己被主人操。                        ",isA: false, isB: false, isC:false}, 
+          { text:"寸止地狱：sub跪在一边边缘刺激，轻声说谢谢主人。却只能看着 Vanilla 被操。      ",isA: false, isB: true, isC:false},  
+          { text:" Vanilla 骑乘主人，Sub在旁边用舌头辅助舔舐她的胸部。                          ",isA: false, isB: false, isC:false}, 
+          { text:"sub躺在床上， Vanilla 坐在她脸上，主人坐在她身上，和V接吻。                   ",isA: false, isB: false, isC:false}, 
+          { text:"sub必须用最下贱的语言描述自己如何不如 Vanilla 好操、如何输给她。              ",isA: false, isB: true, isC:false},  
+          { text:"Vanilla 用脚踩着sub的乳房和脸，主人同时猛操sub。                              ",isA: false, isB: false, isC:false}, 
+          { text:"sub被命令张开腿， Vanilla 用脚趾玩弄她的阴蒂，一边女绿羞辱她，主人在旁边观看。",isA: false, isB: true, isC:false},  
+          { text:"主人操 Vanilla 时，sub必须跪在床边，用嘴含住主人的蛋蛋。                      ",isA: false, isB: false, isC:false}, 
+          { text:"sub被 Vanilla 扇耳光，同时被主人从后面插入作为奖励。                          ",isA: false, isB: false, isC:false}, 
+          { text:"sub必须对主人祈求：“这一轮请主人操她，我这个母狗只配看着。                    ",isA: false, isB: true, isC:false},  
+          { text:" Vanilla 骑在主人身上套弄，sub只能在下面舔主人们的结合处。                    ",isA: false, isB: false, isC:false}, 
+          { text:"sub双手反绑在身后，只能用嘴和舌头侍奉主人和 Vanilla 。                        ",isA: false, isB: false, isC:false}, 
+          { text:"主人操sub时， Vanilla 必须坐在sub脸上，让她无法大声叫床。                     ",isA: false, isB: false, isC:false}, 
+          { text:" Vanilla 用穿戴式操sub，主人同时操 sub的嘴 。                                 ",isA: false, isB: false, isC:false}, 
+          { text:"sub跪着蒙上眼，只能通过声音猜测主人和 Vanilla 在做什么                        ",isA: false, isB: false, isC:false}, 
+          { text:"sub用整张脸摩擦V的下体，把 Vanilla 的淫水涂到自己脸上，作为雌竞失败的标记。   ",isA: false, isB: false, isC:false}, 
+          { text:"主人猛操 Vanilla 时，sub只能在旁边寸止自己，不准高潮。                        ",isA: false, isB: false, isC:false}, 
+          { text:"下一次V被操后，sub被命令用舌头清理 Vanilla 被操后的阴部。                     ",isA: false, isB: false, isC:false}, 
+          { text:"Vanilla 横趴在sub背上被主人操，sub必须像桌子一样撑住。                        ",isA: false, isB: false, isC:false}, 
+          { text:"sub必须亲吻 Vanilla 的脚底，同时被主人从后面抽插。                            ",isA: false, isB: false, isC:false}, 
+          { text:"sub被 Vanilla 用脚踩着头，主人从后面操sub。                                   ",isA: false, isB: false, isC:false}, 
+          { text:"sub必须描述自己最下贱的女绿幻想：如何被主人们两人一起支配和羞辱。             ",isA: false, isB: true, isC:false},  
+          { text:"Vanilla 尿在sub脸上，sub必须张嘴接住并感谢。                                  ",isA: true, isB: false, isC:false},  
+          { text:"sub被蒙眼保持M字开腿， Vanilla 和主人在她身上同时玩弄。                       ",isA: false, isB: false, isC:false}, 
+          { text:"主人和Vanilla同时尿在sub身上                                                  ",isA: true, isB: false, isC:false},  
+          { text:"主人尿在马桶圈上，由SUB舔舐，请Vanilla拍摄下来                                ",isA: true, isB: false, isC:false},  
+          { text:"Vanilla 用双头龙插入sub，主人使用sub的另一个洞。                              ",isA: false, isB: false, isC:false}
+        ]
+      },
+    
+      reward: {
+        1: [
+          { text:"另两位玩家一起用舌头和手温柔地舔吻你的全身。                      ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家一起用脚给你足交，你可以好好享受。                      ",isA: false, isB: false, isC:false},
+          { text:"被另两位玩家蒙眼，你来猜是谁在用嘴轻轻含着你的手指或脚趾。        ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家同时在你耳边轻声喘息或说最甜最骚的话                    ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家一起用胸部在你身上慢慢磨蹭。                            ",isA: false, isB: false, isC:false},
+          { text:"被另两位玩家同时亲吻脖子、锁骨和胸口，像在争夺你一样。            ",isA: false, isB: false, isC:false},
+          { text:"享受另两位玩家用温暖的舌头仔细舔你的脚心和脚趾。                  ",isA: false, isB: false, isC:false},
+          { text:"你躺在中间，另两位玩家一边一个，用身体轻轻贴着你磨蹭。            ",isA: false, isB: false, isC:false},
+          { text:"被另两位玩家一起用手指和舌头在你大腿内侧做边缘爱抚。              ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家同时用最温柔的方式亲吻你的耳朵和耳后。                  ",isA: false, isB: false, isC:false},
+          { text:"享受另两位玩家用嘴唇和舌头侍奉你的乳头。                          ",isA: false, isB: false, isC:false},
+          { text:"你可以命令另两位玩家互相亲吻给你看，或者三人一起舌吻              ",isA: false, isB: false, isC:false},
+          { text:"被另两位玩家一起用丝袜脚或光脚在你腿上慢慢滑动按摩。              ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家同时把脸贴在你大腿根部，轻轻呼吸和轻吻。                ",isA: false, isB: false, isC:false},
+          { text:"享受被另两位玩家用手温柔抚摸你的胸口、腹部和大腿。                ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家一起用舌头在你全身画圈，重点照顾你最敏感的部位。        ",isA: false, isB: false, isC:false}                   
+        ],
+        2: [
+          { text:"另两位玩家一起用嘴巴侍奉你的下身前后敏感部位。                    ",isA: false, isB: false, isC:false},
+          { text:"蒙眼，猜测是谁在给你口交。                                        ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家同时爱抚舔舐你的全身，包括脚趾。                        ",isA: false, isB: false, isC:false},
+          { text:"享受另两位玩家在你耳边喘息或说淫语，同时用手和嘴爱抚你。          ",isA: false, isB: false, isC:false},
+          { text:"躺在床上，享受另外两外玩家分别坐在你的脸上和下体对你进行刺激      ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家一起用脚（光脚或丝袜）给你足交。                        ",isA: false, isB: false, isC:false},
+          { text:"你躺在中间，另两位玩家一边一个用身体轻轻磨蹭并口交。              ",isA: false, isB: false, isC:false},
+          { text:"一位玩家在你正面亲吻你，另一位在你背后爱抚你                      ",isA: false, isB: false, isC:false},
+          { text:"下次抽到寸止的时候 你可以用高潮结束                               ",isA: false, isB: false, isC:false},
+          { text:"你可以和一位玩家相互亲吻，同时另一人缓慢并温柔地和你做爱。        ",isA: false, isB: false, isC:false},
+          { text:"你可以请另两位玩家互相亲吻，同时一人缓慢并温柔地和你做爱。        ",isA: false, isB: false, isC:false},
+          { text:"趴在床上，请另两位玩家对你进行温柔的按摩放松                      ",isA: false, isB: false, isC:false},
+          { text:"另两位玩家把脸贴近你的下体喘息，同时轻吻和摩擦。                  ",isA: false, isB: false, isC:false},
+          { text:"享平躺在床上，受另两位玩家用手、嘴和身体对你进行全身爱抚。        ",isA: false, isB: false, isC:false},
+          { text:"被另两位玩家一人骑在你脸上被舔、一人用嘴巴侍奉你的下体            ",isA: false, isB: false, isC:false}                   
+        ],
+        3: [
+          { text:"两个女生同时坐在玩家一身上，用臀部摩擦肉棒                                  ",isA: false, isB: false, isC:false},
+          { text:"轮流给玩家一足交，请他评价各自的技术                                        ",isA: false, isB: false, isC:false},
+          { text:"躺在床上，两个女生用乳房同时夹住你的肉棒，进行多人乳交。                    ",isA: false, isB: false, isC:false},
+          { text:"两个女生跪着轮流深喉，同时请玩家一用脚玩弄下体                              ",isA: false, isB: false, isC:false},
+          { text:"三人缠绵亲吻：你躺在中间，两个玩家从两侧亲吻你的身体和嘴唇。                ",isA: false, isB: false, isC:false},
+          { text:"其中一个女生被操时，另一个女生用脚踩在你胸口或脸上。                        ",isA: false, isB: false, isC:false},
+          { text:"双人口交：另两位玩家一前一后对你进行口交                                    ",isA: false, isB: false, isC:false},
+          { text:"请玩家一躺下，一个女生骑乘，另一位坐在他脸上。两位女生亲吻                  ",isA: false, isB: false, isC:false},
+          { text:"享受足部天堂：两为女生用四只脚同时侍奉玩家一的肉棒和身体。                  ",isA: false, isB: false, isC:false},
+          { text:"高潮释放特权：允许你在任意一个女生体内或脸上射精，另一个女生必须帮忙清理。  ",isA: false, isB: false, isC:false},
+          { text:"花式3P：两个女生叠罗汉，请玩家一从后面轮流插入，享受不同角度的紧致。        ",isA: false, isB: false, isC:false},
+          { text:"一个女生控制另一个女生的头来给玩家一口交。猜拳决定，输的人负责控制另一个    ",isA: false, isB: false, isC:false}, 
+          { text:"三人一起高潮：两个女生一起被刺激到高潮，你最后射在她们脸上或胸上。          ",isA: false, isB: false, isC:false}                   
+        ]
+      },
+    
+      penalty: {
+        1: [
+          { text:"保持M字开腿坐在上一位玩家面前，双手抱头邀请对方玩弄，暴露30秒。       ",isA: false, isB: false, isC:false},
+          { text:"被轻打5下耳光，同时必须说“谢谢”。                                     ",isA: false, isB: false, isC:false},
+          { text:"跪在地上，用舌头把另一个女生的脚趾一根一根舔一遍。                    ",isA: false, isB: false, isC:false},
+          { text:"趴在地上，屁股高高翘起，被手掌拍打10下并大声数出来。                  ",isA: false, isB: false, isC:false},
+          { text:"被蒙眼，用手指在乳头和阴部上方边缘挑逗40秒（不许高潮）。              ",isA: false, isB: false, isC:false},
+          { text:"双手反绑在身后，胸部用力挺起，被轻度拍打乳房8下。                     ",isA: false, isB: false, isC:false},
+          { text:"趴在上一位玩家腿上，屁股高高翘起，被手掌拍打10下并大声数出来。        ",isA: false, isB: false, isC:false},
+          { text:"站在门口，打开门缝10秒（只露上半身），然后快速关上。                  ",isA: false, isB: false, isC:true}, 
+          { text:"保持狗爬式姿势，爬到上一位玩家面前并把屁股转过来，摇动以邀请爱抚或sp。",isA: false, isB: false, isC:false},
+          { text:"被所有人玩弄乳头和下体15秒。包括自己                                  ",isA: false, isB: false, isC:false},
+          { text:"在闪光灯下自慰30秒。                                                  ",isA: false, isB: false, isC:false},
+          { text:"跪着亲吻另一个女生的脚背，并说“今天请比我被用的更多”。                ",isA: false, isB: true, isC:false}, 
+          { text:"双腿大开站立，双手抬起抓住脖子，被手掌轻轻抽打阴部10下。              ",isA: false, isB: false, isC:false},
+          { text:"保持双手举过头顶的姿势，被欣赏身体1分钟。赞美她                       ",isA: false, isB: false, isC:false},
+          { text:"用最下贱的声音祈求今晚被多玩一会儿。                                  ",isA: false, isB: true, isC:false}, 
+          { text:"摆出自认为性感撩人的姿势，拍摄几张写真                                ",isA: false, isB: false, isC:false},
+          { text:"聊一下你认为自己的身体最有性魅力的部位，你将如何发挥优势？            ",isA: false, isB: false, isC:false}                   
+        ],
+        2: [
+          { text:"仰面躺好，手伸过头顶。请男玩家固定住你的手，然后被另一位女玩家用假阳肏。时间由她决定。                            ",isA: false, isB: false, isC:false},  
+          { text:"保持M字开腿，被两人共同用手指或玩具边缘刺激1分钟（不准高潮）。用平静的语调描述正在发生的事/你的状态/你的感受/致谢 ",isA: false, isB: false, isC:false},  
+          { text:"和另一个女生相互轻打耳光5下，同时感谢对方。                                                                       ",isA: false, isB: false, isC:false},  
+          { text:"跪在地上，用舌头侍奉另一个女生的阴部40秒。称赞她的下体                                                            ",isA: false, isB: false, isC:false},  
+          { text:"趴在床上屁股高翘，打开双腿，被另一个女生抽打下体15次。然后交换角色。                                              ",isA: false, isB: false, isC:false},  
+          { text:"被蒙眼寸止：刺激到高潮边缘然后捏痛乳首打断，反复2次。                                                             ",isA: false, isB: false, isC:false},  
+          { text:"双手背在身后，挺胸，请另两位玩家将乳首虐红                                                                        ",isA: false, isB: false, isC:false},  
+          { text:"跪着观看另两外玩家亲热，并轻声说“我只配看着”。                                                                    ",isA: false, isB: true, isC:false},   
+          { text:"打开门站在门口10-15秒，并被录像                                                                                   ",isA: false, isB: false, isC:true},   
+          { text:"打开门，走到下下个房间门口，并被录像                                                                              ",isA: false, isB: false, isC:true},   
+          { text:"打开门，爬到下个房间门口，并被录像                                                                                ",isA: false, isB: false, isC:true},   
+          { text:"两人一起：仅穿着浴袍一起出门，在楼梯间拍照留念                                                                    ",isA: false, isB: false, isC:true},   
+          { text:"保持狗爬姿势，进行两轮游戏。                                                                                      ",isA: false, isB: false, isC:false},  
+          { text:"跪姿屁股敲高，被用力sp10下。报数并大声说出“谢谢您/主人”。                                                         ",isA: false, isB: false, isC:false},  
+          { text:"跪着亲吻另一个女生的脚，并上行到阴部，并承认自己此时更骚。                                                        ",isA: false, isB: true, isC:false},   
+          { text:"双腿大开，被上一个玩家用手掌快速拍打阴部15下。                                                                    ",isA: false, isB: false, isC:false},  
+          { text:"角色扮演：如果你是一名性奴，描述你的主要职责，你将如何完成你的使命？                                              ",isA: false, isB: false, isC:false},  
+          { text:"角色扮演：如果你是一个古代战俘，描述你可能会遭受什么？会有什么命运？                                              ",isA: false, isB: false, isC:false},  
+          { text:"趴下，让另一个女生在你屁股和乳房写羞耻词，然后舔一点她的圣水。                                                    ",isA: true, isB: false, isC:false},   
+          { text:"描述你认为对异性最好的侍奉方式，并在玩家身上演示                                                                  ",isA: false, isB: false, isC:false},  
+          { text:"描述你认为对同性最好的侍奉方式，并在玩家身上演示                                                                  ",isA: false, isB: false, isC:false}                     
+        ],
+        3: [
+          { text:"背手跪在玩家一面前，用舌头和嘴唇争抢他的肉棒，谁先含住龟头谁赢，输的被连续sp10次。                                                                                    ",isA: false, isB: true, isC:false}, 
+          { text:"双头龙插入你们两人阴道，进行拔河比赛，输的一方被连续寸止3次，一边重复“谢谢让我变得更敏感”。                                                                           ",isA: false, isB: false, isC:false}, 
+          { text:"高潮速度比赛：两人同时用小玩具自慰，谁先高潮谁赢。输的女生必须跪好，一边继续寸止，一边看着赢家被操一分钟                                                              ",isA: false, isB: true, isC:false},  
+          { text:"玩家一操另一个玩家一分钟，同时由你舔舐他们的脚。                                                                                                                      ",isA: false, isB: false, isC:false}, 
+          { text:"躺在地板上被另两位玩家踩着，边缘刺激到接近高潮时，高潮发生一秒后立刻停止                                                                                              ",isA: false, isB: true, isC:false},  
+          { text:"排泄比赛：和另一位女玩家比赛排泄。量少的那个女生帮另一位舔舐干净。                                                                                                    ",isA: true, isB: false, isC:false}, 
+          { text:"排泄控制比赛：和另一位女玩家一起蹲下张腿排泄，在玩家一说停下的时候立刻停下。输家禁止擦拭，并帮赢家用纸巾擦拭干净                                                      ",isA: false, isB: false, isC:false}, 
+          { text:"双手被绑在身后，跪姿被玩家一打红屁股（至少20下），需要报数并致谢。                                                                                                    ",isA: false, isB: false, isC:true},  
+          { text:"尽量深地使用双头龙，直到其中一人求饶。放轻松，求饶的人没有额外惩罚                                                                                                    ",isA: false, isB: false, isC:false}, 
+          { text:"四肢着地，屁股高抬，另一位女玩家趴在她背上被玩家一操。                                                                                                                ",isA: false, isB: false, isC:false}, 
+          { text:"一个人控制另一个女生的四肢（抱住或压住），让玩家一随意操被控制者，被控制者必须不断感谢固定她的人。                                                                    ",isA: false, isB: true, isC:false},  
+          { text:"深喉比赛：轮流给玩家一深喉，比赛谁吃的深。赢的人可以用高潮结束下一次寸止                                                                                              ",isA: false, isB: true, isC:false},  
+          { text:"被蒙眼寸止1次，期间另一个女生可以随意用脚玩弄你的阴部或乳房。                                                                                                         ",isA: false, isB: false, isC:false}, 
+          { text:"赛博露出：掰开展示你的小穴，请其他玩家用手机闪光灯为你打光，并描述它的功能。拍摄一张照片，配合描述文字发在朋友圈里（设置为仅在场玩家可见）                            ",isA: false, isB: false, isC:true},  
+          { text:"赛博露出：掰开展示你的后穴，请其他玩家用手机闪光灯为你打光，并描述刺激时它带给你的感受。拍摄一张照片，配合描述文字发在朋友圈里（设置为仅在场玩家可见）                ",isA: false, isB: true, isC:true},   
+          { text:"赛博露出：展示你的口穴/胸/屁股/脚，请其他玩家欣赏并用手机闪光灯为你打光，并描述它们在性中的作用。各拍摄一张照片，配合描述文字发在朋友圈里（设置为仅在场玩家可见）     ",isA: false, isB: false, isC:true},  
+          { text:"羞辱枷锁：在脖子上画一条线作为标记。下一次被插入之前，你必须描述你有多么渴望被插入。                                                                                  ",isA: false, isB: false, isC:false}, 
+          { text:"毁灭高潮连发：被刺激到连续高潮3次以上，期间另一个女生必须用语言不断从女绿角度羞辱/感谢你。                                                                            ",isA: false, isB: true, isC:false},  
+          { text:"保住膝盖保持M字开腿姿势放入玩具，另两位玩家一起用脚踩你的脸和胸                                                                                                       ",isA: false, isB: false, isC:false}                    
+        ]
+      },
+    
+      ending: [
+        { text: "恭喜完成游戏~好好享受接下来的乱交party~", isA: false, isB: false, isC: false },
+        { text: "恭喜到达终点！请玩家2/3以六九的姿势相互为对方寸止一次，然后享受乱交吧~~", isA: false, isB: false, isC: false },
+        { text: "恭喜完成游戏~请所有玩家躺上床，尽情一起亲热乱交吧！", isA: false, isB: false, isC: false },
+        { text: "恭喜完成游戏~请大家上床，玩家2/3坐在玩家1身上作为开始，享受乱交吧~", isA: false, isB: false, isC: false }
+      ]
+    };
+    
+
+    const eventChains = createEventChains();
+    let goldenPools = createGoldenPools(config.eventCountPerLevel);
+    let endingGoldenPool = createEndingGoldenPool(40);
+    let runtimePools = {};
+    let runtimeEndingPool = [];
+    let players = [];
+    let boardCells = [];
+    let visitedCells = new Set([0]);
+    let currentPlayerIndex = 0;
+    let gameOver = false;
+    let isMoving = false;
+    let activeMovingPlayerIndex = null;
+    let activeChains = {};
+    let logCounter = 1;
+    let pendingAfterModal = null;
+    let playerStats = {};
+    let currentCardContext = null; // 当前弹出的卡片上下文，用于“跳过重抽”
+
+    const boardEl = document.getElementById("board");
+    const playersListEl = document.getElementById("playersList");
+    const currentTurnEl = document.getElementById("currentTurn");
+    const drawResultEl = document.getElementById("drawResult");
+    const eventResultEl = document.getElementById("eventResult");
+    const logListEl = document.getElementById("logList");
+    const cellHintEl = document.getElementById("cellHint");
+    const mobileTurnStatusEl = document.getElementById("mobileTurnStatus");
+    const mobileDiceDisplayEl = document.getElementById("mobileDiceDisplay");
+    const eventModalEl = document.getElementById("eventModal");
+    const eventCardEl = document.getElementById("eventCard");
+    const eventCardLabelEl = document.getElementById("eventCardLabel");
+    const eventCardTitleEl = document.getElementById("eventCardTitle");
+    const eventCardMetaEl = document.getElementById("eventCardMeta");
+    const eventModalCloseBtn = document.getElementById("eventModalCloseBtn");
+    const skipCardBtn = document.getElementById("skipCardBtn");
+    const settingsToggleBtn = document.getElementById("settingsToggleBtn");
+    const settingsContent = document.getElementById("settingsContent");
+    const rollButtons = Array.from(document.querySelectorAll(".roll-btn"));
+
+    rollButtons.forEach(button => button.addEventListener("click", rollDice));
+    eventModalCloseBtn.addEventListener("click", closeEventModal);
+    skipCardBtn.addEventListener("click", skipCurrentCard);
+    eventModalEl.addEventListener("click", event => { if (event.target === eventModalEl) closeEventModal(); });
+    settingsToggleBtn.addEventListener("click", () => {
+      settingsContent.classList.toggle("open");
+      settingsToggleBtn.textContent = settingsContent.classList.contains("open") ? "收起设置" : "打开设置";
+    });
+    document.getElementById("resetBtn").addEventListener("click", initGame);
+    document.getElementById("applyConfigBtn").addEventListener("click", applyConfig);
+    document.getElementById("loadSaveBtn").addEventListener("click", loadGameState);
+    document.getElementById("clearSaveBtn").addEventListener("click", clearSavedGame);
+    document.getElementById("importEventsBtn").addEventListener("click", importEventsFromJson);
+
+//    function createEventChains() {
+//      const chains = { task: { 2: [], 3: [] }, reward: { 2: [], 3: [] }, penalty: { 2: [], 3: [] } };
+//      ["task", "reward", "penalty"].forEach(type => {
+//        chains[type][2] = Array.from({ length: 2 }, (_, c) => ({ id: `${type}-L2-chain-${c + 1}`, nodes: Array.from({ length: 2 }, (_, n) => ({ id: `${type}-L2-chain-${c + 1}-node-${n + 1}`, type, level: 2, chainId: `${type}-L2-chain-${c + 1}`, nodeIndex: n, text: `${cellTypeText[type]}2级事件链${c + 1}-节点${n + 1}`, isA: false, isB: false, isC: false, isChain: true })) }));
+//        chains[type][3] = Array.from({ length: 3 }, (_, c) => ({ id: `${type}-L3-chain-${c + 1}`, nodes: Array.from({ length: 3 }, (_, n) => ({ id: `${type}-L3-chain-${c + 1}-node-${n + 1}`, type, level: 3, chainId: `${type}-L3-chain-${c + 1}`, nodeIndex: n, text: `${cellTypeText[type]}3级事件链${c + 1}-节点${n + 1}`, isA: false, isB: false, isC: false, isChain: true })) }));
+//      });
+//      return chains;
+//    }
+
+function createEventChains() {
+  return {
+    task: {
+      2: [
+        {
+          id: "task-L2-chain-1",
+          nodes: [
+            {
+              id: "task-L2-chain-1-node-1",
+              type: "task",
+              level: 2,
+              chainId: "task-L2-chain-1",
+              nodeIndex: 0,
+              text: "指定一位女玩家，让她插入双头龙继续接下来的游戏",
+              isA: false,
+              isB: false,
+              isC: false,
+              isChain: true
+            },
+            {
+              id: "task-L2-chain-1-node-2",
+              type: "task",
+              level: 2,
+              chainId: "task-L2-chain-1",
+              nodeIndex: 1,
+              text: "使用你的双头龙艹另一位女玩家一分钟",
+              isA: false,
+              isB: false,
+              isC: false,
+              isChain: true
+            }
+          ]
+        },
+
+        {
+          id: "task-L2-chain-2",
+          nodes: [
+            {
+              id: "task-L2-chain-2-node-1",
+              type: "task",
+              level: 2,
+              chainId: "task-L2-chain-2",
+              nodeIndex: 0,
+              text: "描述你是如何自慰的？演示给大家看",
+              isA: false,
+              isB: false,
+              isC: false,
+              isChain: true
+            },
+            {
+              id: "task-L2-chain-2-node-2",
+              type: "task",
+              level: 2,
+              chainId: "task-L2-chain-2",
+              nodeIndex: 1,
+              text: "将你自慰的方式教给另一位玩家，让ta帮你并尝试寸止",
+              isA: false,
+              isB: false,
+              isC: false,
+              isChain: true
+            }
+          ]
+        }
+      ],
+
+      3: [
+        {
+          id: "task-L3-chain-1",
+          nodes: [
+            {
+              id: "task-L3-chain-1-node-1",
+              type: "task",
+              level: 3,
+              chainId: "task-L3-chain-1",
+              nodeIndex: 0,
+              text: "在你自己身体上书写三个淫秽词汇，自由发挥。若你是玩家一，让玩家2/3都这样做",
+              isChain: true
+            },
+            {
+              id: "task-L3-chain-1-node-2",
+              type: "task",
+              level: 3,
+              chainId: "task-L3-chain-1",
+              nodeIndex: 1,
+              text: "打开房门,站在房间门口，面朝外。请其他玩家拍摄你站在门口的样子。",
+              isChain: true
+            },
+            {
+              id: "task-L3-chain-1-node-3",
+              type: "task",
+              level: 3,
+              chainId: "task-L3-chain-1",
+              nodeIndex: 2,
+              text: "面向镜头展示你身上的淫语，详细地解释你为何写它，它如何符合你的某些特质。",
+              isChain: true
+            }
+          ]
+        }
+      ]
+    },
+
+    reward: { 2: [], 3: [] },
+    penalty: { 2: [], 3: [] }
+  };
+}
+    function normalizeEventItem(item, type, level, id) {
+      if (typeof item === "string") return { id, type, level, text: item, isA: false, isB: false, isC: false, isChain: false, isSub: false };
+      return { id, type, level, text: item?.text || `${cellTypeText[type] || "事件"}占位符`, isA: Boolean(item?.isA), isB: Boolean(item?.isB), isC: Boolean(item?.isC), isChain: false, isSub: Boolean(item?.isSub) };
+    }
+
+    function createGoldenPools(countPerLevel) {
+      const pools = { task: { 1: [], 2: [], 3: [] }, reward: { 1: [], 2: [], 3: [] }, penalty: { 1: [], 2: [], 3: [] } };
+      ["task", "reward", "penalty"].forEach(type => {
+        [1, 2, 3].forEach(level => {
+          const builtIns = (builtInEvents[type][level] || []).map((item, i) => normalizeEventItem(item, type, level, `builtin-${type}-${level}-${i + 1}`));
+          const placeholders = Array.from({ length: countPerLevel }, (_, i) => ({ id: `${type}-${level}-${i + 1}`, type, level, text: `${cellTypeText[type]}占位符${level}级-${i + 1}`, isA: false, isB: false, isC: false, isChain: false, isSub: false }));
+          const subItems = type === "task"
+            ? (builtInEvents.taskSub[level] || []).map((item, i) => ({
+                ...normalizeEventItem(item, "task", level, `sub-task-${level}-${i + 1}`),
+                isSub: true
+              }))
+            : [];
+          pools[type][level] = [...builtIns, ...placeholders, ...subItems];
+        });
+      });
+      //["task", "reward", "penalty"].forEach(type => [2, 3].forEach(level => eventChains[type][level].forEach(chain => pools[type][level].push(chain.nodes[0]))));
+      ["task"].forEach(type => [2, 3].forEach(level => eventChains[type][level].forEach(chain => pools[type][level].push(chain.nodes[0]))));
+      return pools;
+    }
+
+    function createEndingGoldenPool(count) {
+      const builtIns = (builtInEvents.ending || []).map((item, i) => normalizeEventItem(item, "ending", "ending", `builtin-ending-${i + 1}`));
+      const placeholders = Array.from({ length: count }, (_, i) => ({ id: `ending-${i + 1}`, type: "ending", level: "ending", text: `结局占位符-${i + 1}`, isA: false, isB: false, isC: false, isChain: false, isSub: false }));
+      return [...builtIns, ...placeholders];
+    }
+
+    function createRuntimePools() {
+      const pools = { task: { 1: [], 2: [], 3: [] }, reward: { 1: [], 2: [], 3: [] }, penalty: { 1: [], 2: [], 3: [] } };
+      ["task", "reward", "penalty"].forEach(type => [1, 2, 3].forEach(level => { pools[type][level] = shuffleCopy(goldenPools[type][level]); }));
+      return pools;
+    }
+
+    function applyConfig() {
+      config.playerCount = clamp(Number(document.getElementById("playerCountInput").value), 2, 6);
+      config.boardSize = clamp(Number(document.getElementById("boardSizeInput").value), 10, 200);
+      document.getElementById("playerCountInput").value = config.playerCount;
+      document.getElementById("boardSizeInput").value = config.boardSize;
+      initGame();
+    }
+
+    function initGame() {
+      players = Array.from({ length: config.playerCount }, (_, i) => ({ name: `玩家${i + 1}`, position: 0, color: colors[i] }));
+      playerStats = {};
+      players.forEach(p => { playerStats[p.name] = { task: [], reward: [], penalty: [] }; });
+      boardCells = createBoardCells(config.boardSize);
+      visitedCells = new Set([0]);
+      runtimePools = createRuntimePools();
+      runtimeEndingPool = shuffleCopy(endingGoldenPool);
+      activeChains = {};
+      currentPlayerIndex = 0;
+      gameOver = false;
+      isMoving = false;
+      activeMovingPlayerIndex = null;
+      pendingAfterModal = null;
+      currentCardContext = null;
+      logCounter = 1;
+      setRollButtons(false, "投骰子");
+      drawResultEl.textContent = "点击“投骰子”开始游戏";
+      eventResultEl.textContent = "尚未触发格子内容";
+      mobileDiceDisplayEl.textContent = "等待玩家投骰子";
+      cellHintEl.textContent = "点击或悬停格子，可查看格子状态。";
+      logListEl.innerHTML = "";
+      closeEventModal(false);
+      addLog(`游戏开始：${config.playerCount} 名玩家，${config.boardSize} 格。`);
+      renderAll();
+      saveGameState();
+    }
+
+    function createBoardCells(size) {
+      const usable = size - 1;
+      const rewardCount = Math.round(usable * 0.1);
+      const penaltyCount = Math.round(usable * 0.2);
+      const taskCount = usable - rewardCount - penaltyCount;
+      const types = shuffle([...Array(rewardCount).fill("reward"), ...Array(penaltyCount).fill("penalty"), ...Array(taskCount).fill("task")]);
+      return Array.from({ length: size }, (_, i) => i === 0 ? { index: i, type: "start" } : { index: i, type: types[i - 1] });
+    }
+
+    async function rollDice() {
+      if (gameOver || isMoving) return;
+      isMoving = true;
+      setRollButtons(true, "投掷中...");
+      const player = players[currentPlayerIndex];
+      const movingIndex = currentPlayerIndex;
+      const roll = await playDiceAnimation(player);
+      const oldPosition = player.position;
+      const rawTarget = oldPosition + roll;
+      const target = clamp(rawTarget, 0, config.boardSize - 1);
+      const reachesEnding = rawTarget >= config.boardSize - 1;
+      activeMovingPlayerIndex = movingIndex;
+      setRollButtons(true, "移动中...");
+      drawResultEl.innerHTML = `${player.name} 掷出：<br><span class="dice-number">${roll}</span><span class="dice-unit">点</span>`;
+      mobileDiceDisplayEl.innerHTML = `${player.name} 掷出：<br><span class="dice-number">${roll}</span><span class="dice-unit">点</span>`;
+      addLog(`${player.name} 掷出 ${roll} 点，开始从第 ${oldPosition + 1} 格前进。`);
+      await animatePlayerMove(player, oldPosition, target);
+      addLog(`${player.name} 移动到第 ${target + 1} 格。`);
+
+      if (reachesEnding) {
+        triggerEndingEvent(player);
+        gameOver = true;
+        drawResultEl.innerHTML = `🎉 ${player.name} 到达终点！`;
+        addLog(`🎉 ${player.name} 到达或跨过终点，游戏结束。`);
+        pendingAfterModal = () => {
+          finishAction();
+          saveGameState();
+          showGameSummary();
+        };
+        return;
+      }
+
+      triggerCellEvent(player);
+      pendingAfterModal = () => {
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        finishAction();
+        saveGameState();
+      };
+    }
+
+    function finishAction() {
+      isMoving = false;
+      activeMovingPlayerIndex = null;
+      setRollButtons(gameOver, gameOver ? "游戏结束" : "投骰子");
+      renderAll();
+    }
+
+    function setRollButtons(disabled, text) {
+      rollButtons.forEach(btn => { btn.disabled = disabled; btn.textContent = text; });
+    }
+
+    function playDiceAnimation(player) {
+      const start = Date.now();
+      return new Promise(resolve => {
+        const timer = setInterval(() => {
+          const temp = diceFaces[Math.floor(Math.random() * diceFaces.length)];
+          drawResultEl.innerHTML = `${player.name} 正在投掷<br><span class="dice-number dice-rolling">${temp}</span><span class="dice-unit">点</span>`;
+          mobileDiceDisplayEl.innerHTML = `${player.name} 正在投掷<br><span class="dice-number dice-rolling">${temp}</span><span class="dice-unit">点</span>`;
+          if (Date.now() - start >= 1000) {
+            clearInterval(timer);
+            resolve(diceFaces[Math.floor(Math.random() * diceFaces.length)]);
+          }
+        }, 90);
+      });
+    }
+
+    async function animatePlayerMove(player, start, target) {
+      for (let pos = start + 1; pos <= target; pos++) {
+        player.position = pos;
+        visitedCells.add(pos);
+        renderAll();
+        await sleep(520);
+      }
+    }
+
+    function triggerCellEvent(player) {
+      visitedCells.add(player.position);
+      const cell = boardCells[player.position];
+      if (cell.type === "start") return;
+      const level = getPoolLevel(player.position);
+
+      // 特殊规则：玩家1免疫惩罚。玩家1踩到惩罚格时，改为抽任务卡。
+      const actualType = (player.name === "玩家1" && cell.type === "penalty") ? "task" : cell.type;
+      const event = drawEventOrChain(player, actualType, level);
+      presentDrawnEvent({ player, cellType: cell.type, actualType, level, event });
+    }
+
+    function presentDrawnEvent({ player, cellType, actualType, level, event }) {
+      if (playerStats[player.name]?.[actualType]) playerStats[player.name][actualType].push(event.text);
+
+      currentCardContext = { player, cellType, actualType, level, event };
+
+      const chainHtml = event.isChain ? `<br><span class="chain-note">事件链 ${event.nodeIndex + 1}/${getChainLengthByEvent(event)}</span>` : "";
+      eventResultEl.innerHTML = `<div class="event-main-text">${event.text}${chainHtml}</div>`;
+      showEventModal({
+        type: actualType,
+        label: event.isSub ? `${cellTypeText[actualType]} sub卡` : `${cellTypeText[actualType]}卡`,
+        title: event.text,
+        meta: actualType !== cellType
+          ? `${player.name} 免疫惩罚，改为触发任务事件`
+          : (event.isSub ? `${player.name} 触发专属 sub 事件` : (event.isChain ? `事件链节点 ${event.nodeIndex + 1}/${getChainLengthByEvent(event)}` : `${player.name} 触发事件`)),
+        skippable: isCurrentCardSkippable(event)
+      });
+      addLog(`${player.name} 触发「${event.isSub ? "sub" : ""}${cellTypeText[actualType]}」：${event.text}。当前为 ${level}级池。${actualType !== cellType ? "（免疫惩罚，转为任务）" : ""}`);
+    }
+
+    function triggerEndingEvent(player) {
+      visitedCells.add(config.boardSize - 1);
+      const event = drawEndingEvent();
+      eventResultEl.innerHTML = `<div class="event-main-text">${event.text}</div>`;
+      showEventModal({ type: "ending", label: "结局事件", title: event.text, meta: `${player.name} 到达或跨过终点` });
+      addLog(`${player.name} 触发「结局」：${event.text}。`);
+    }
+
+    function drawEventOrChain(player, type, level) {
+      const key = `${player.name}-${type}`;
+      if (activeChains[key]) {
+        const state = activeChains[key];
+        let node = state.chain.nodes[state.nextNodeIndex];
+        while (node && !isEventAllowed(node, player)) { state.nextNodeIndex++; node = state.chain.nodes[state.nextNodeIndex]; }
+        if (!node) { delete activeChains[key]; return drawEventFromPool(type, level, player); }
+        state.nextNodeIndex++;
+        if (state.nextNodeIndex >= state.chain.nodes.length) delete activeChains[key];
+        return node;
+      }
+      const event = drawEventFromPool(type, level, player);
+      if (event.isChain && event.nodeIndex === 0) {
+        const chain = findChainById(event.chainId);
+        if (chain) activeChains[key] = { chain, nextNodeIndex: 1 };
+      }
+      return event;
+    }
+
+    function drawEventFromPool(type, level, player) { return drawFilteredEvent(runtimePools[type][level], goldenPools[type][level], player); }
+    //function drawEndingEvent() { return drawFilteredEvent(runtimeEndingPool, endingGoldenPool, null); }
+    function drawEndingEvent() {
+      const pool = endingGoldenPool.filter(event => event && event.text && !event.text.includes("结局占位符"));
+    
+      if (pool.length === 0) {
+        return {
+          id: "ending-fallback",
+          type: "ending",
+          level: "ending",
+          text: "恭喜到达终点！请玩家2/3以六九的姿势相互为对方寸止一次，然后享受乱交吧~",
+          isA: false,
+          isB: false,
+          isC: false,
+          isChain: false,
+          isSub: false
+        };
+      }
+
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function drawFilteredEvent(runtimePool, goldenPool, player) {
+      const index = runtimePool.findIndex(event => isEventAllowed(event, player));
+      if (index !== -1) return runtimePool.splice(index, 1)[0];
+      const available = goldenPool.filter(event => isEventAllowed(event, player));
+      if (available.length > 0) { runtimePool.splice(0, runtimePool.length, ...shuffleCopy(available)); return runtimePool.shift(); }
+      if (runtimePool.length > 0) return runtimePool.shift();
+      runtimePool.splice(0, runtimePool.length, ...shuffleCopy(goldenPool));
+      return runtimePool.shift();
+    }
+
+    function isEventAllowed(event, player = null) {
+      if (event.isSub && !isSubEnabledForPlayer(player)) return false;
+      if (document.getElementById("blockA").checked && event.isA) return false;
+      if (document.getElementById("blockB").checked && event.isB) return false;
+      if (document.getElementById("blockC").checked && event.isC) return false;
+      return true;
+    }
+
+    function isSubEnabledForPlayer(player) {
+      if (!player) return false;
+      if (player.name === "玩家2") return document.getElementById("enableSubP2").checked;
+      if (player.name === "玩家3") return document.getElementById("enableSubP3").checked;
+      return false;
+    }
+
+    function getPoolLevel(position) {
+      const progress = position / (config.boardSize - 1);
+      if (progress >= 2 / 3) return 3;
+      if (progress >= 1 / 3) return 2;
+      return 1;
+    }
+
+    function getChainLengthByEvent(event) {
+      const chain = findChainById(event.chainId);
+      return chain ? chain.nodes.length : 1;
+    }
+
+    function findChainById(chainId) {
+      for (const type of ["task", "reward", "penalty"]) {
+        for (const level of [2, 3]) {
+          const found = eventChains[type][level].find(chain => chain.id === chainId);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    function showEventModal({ type, label, title, meta, skippable = false }) {
+      eventCardEl.className = `event-card ${type}`;
+      eventCardLabelEl.textContent = label;
+      eventCardTitleEl.classList.remove("summary-title");
+      eventCardTitleEl.textContent = title;
+      eventCardMetaEl.textContent = meta;
+      skipCardBtn.classList.toggle("hidden", !skippable);
+      eventModalEl.classList.add("show");
+    }
+
+    function closeEventModal(runPending = true) {
+      eventModalEl.classList.remove("show");
+      skipCardBtn.classList.add("hidden");
+      if (runPending && pendingAfterModal) {
+        const callback = pendingAfterModal;
+        pendingAfterModal = null;
+        callback();
+      }
+    }
+
+    function isCurrentCardSkippable(event) {
+      if (!document.getElementById("allowSkip").checked) return false;
+      if (!event) return false;
+      if (event.type === "ending") return false;
+      // 事件链的非头部节点不允许跳过；普通卡和事件链头节点允许跳过。
+      if (event.isChain && event.nodeIndex > 0) return false;
+      return true;
+    }
+
+    function skipCurrentCard(event) {
+      event.stopPropagation();
+      if (!currentCardContext || !isCurrentCardSkippable(currentCardContext.event)) return;
+
+      const { player, cellType, actualType, level, event: skippedEvent } = currentCardContext;
+
+      // 若跳过的是事件链头节点，取消刚刚挂上的事件链，避免后续强制进入链。
+      if (skippedEvent.isChain && skippedEvent.nodeIndex === 0) {
+        delete activeChains[`${player.name}-${actualType}`];
+      }
+
+      // 统计中移除被跳过的当前卡；卡本身已经从运行池消耗掉，不放回。
+      const statList = playerStats[player.name]?.[actualType];
+      if (statList && statList[statList.length - 1] === skippedEvent.text) {
+        statList.pop();
+      }
+
+      addLog(`${player.name} 跳过了「${skippedEvent.text}」，重新抽取。`);
+      const nextEvent = drawEventOrChain(player, actualType, level);
+      presentDrawnEvent({ player, cellType, actualType, level, event: nextEvent });
+      saveGameState();
+    }
+
+    function showGameSummary() {
+      let bestPlayers = [];
+      let maxReward = -1;
+      let summary = "";
+
+      players.forEach(player => {
+        const stats = playerStats[player.name] || { task: [], reward: [], penalty: [] };
+        summary += `【${player.name}】
+`;
+        summary += `奖励(${stats.reward.length})：${stats.reward.join("、") || "无"}
+`;
+        summary += `任务(${stats.task.length})：${stats.task.join("、") || "无"}
+`;
+        summary += `惩罚(${stats.penalty.length})：${stats.penalty.join("、") || "无"}
+
+`;
+
+        if (stats.reward.length > maxReward) {
+          maxReward = stats.reward.length;
+          bestPlayers = [player.name];
+        } else if (stats.reward.length === maxReward) {
+          bestPlayers.push(player.name);
+        }
+      });
+
+      summary += `🏆 最佳小馋猫：${bestPlayers.join("、")}
+奖励最多：${maxReward}次`;
+
+      eventCardEl.className = "event-card ending";
+      eventCardLabelEl.textContent = "游戏总结";
+      eventCardTitleEl.classList.add("summary-title");
+      eventCardTitleEl.textContent = summary;
+      eventCardMetaEl.textContent = "本轮游戏已结束";
+      eventModalEl.classList.add("show");
+    }
+
+    function renderAll() { renderBoard(); renderPlayers(); renderCurrentTurn(); }
+
+    function renderCurrentTurn() {
+      currentTurnEl.textContent = gameOver ? "游戏结束" : `当前回合：${players[currentPlayerIndex].name}`;
+      if (!gameOver && players.length > 0) {
+        mobileTurnStatusEl.textContent = `当前玩家：${players[currentPlayerIndex].name}｜下一位：${players[(currentPlayerIndex + 1) % players.length].name}`;
+      } else {
+        mobileTurnStatusEl.textContent = "游戏结束";
+      }
+    }
+
+    function renderPlayers() {
+      playersListEl.innerHTML = "";
+      players.forEach((player, index) => {
+        const item = document.createElement("div");
+        item.className = `player-item ${index === currentPlayerIndex && !gameOver ? "current" : ""}`;
+        item.innerHTML = `<div class="player-name"><span class="dot" style="background:${player.color}"></span>${player.name}${index === currentPlayerIndex && !gameOver ? "（当前）" : ""}${getActiveChainText(player)}</div><div>第 ${player.position + 1} / ${config.boardSize} 格</div>`;
+        playersListEl.appendChild(item);
+      });
+    }
+
+    function getActiveChainText(player) {
+      return Object.entries(activeChains)
+        .filter(([key]) => key.startsWith(`${player.name}-`))
+        .map(([, state]) => `｜链${state.nextNodeIndex + 1}/${state.chain.nodes.length}`)
+        .join("");
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      boardEl.style.gridTemplateColumns = window.innerWidth < 760 ? "repeat(6, var(--cell-size))" : "repeat(10, 70px)";
+      for (let i = 0; i < config.boardSize; i++) {
+        const boardCell = boardCells[i];
+        const isVisited = visitedCells.has(i);
+        const cell = document.createElement("div");
+        cell.className = isVisited ? `cell ${boardCell.type}` : "cell";
+        if (boardCell.type === "start") cell.classList.add("start");
+        if (i === config.boardSize - 1) cell.classList.add("end");
+        const label = i === 0 ? "起点" : i === config.boardSize - 1 ? "终点" : i + 1;
+        const typeName = boardCell.type === "start" ? "起点" : (isVisited ? cellTypeText[boardCell.type] : "？");
+        cell.innerHTML = `<div>${label}</div><div class="cell-type">${typeName}</div><div class="pieces"></div>`;
+        cell.title = getCellHintText(i, boardCell, isVisited);
+        cell.addEventListener("mouseenter", () => showCellHint(i, boardCell, isVisited));
+        cell.addEventListener("click", () => showCellHint(i, boardCell, isVisited));
+        const piecesEl = cell.querySelector(".pieces");
+        players.filter(player => player.position === i).forEach(player => {
+          const piece = document.createElement("div");
+          piece.className = "piece";
+          piece.style.background = player.color;
+          if (players.indexOf(player) === activeMovingPlayerIndex) piece.classList.add("active");
+          piecesEl.appendChild(piece);
+        });
+        boardEl.appendChild(cell);
+      }
+    }
+
+    function showCellHint(index, boardCell, isVisited) { cellHintEl.textContent = getCellHintText(index, boardCell, isVisited); }
+    function getCellHintText(index, boardCell, isVisited) {
+      const label = index === 0 ? "起点" : index === config.boardSize - 1 ? "终点" : `第 ${index + 1} 格`;
+      const playersHere = players.filter(player => player.position === index).map(player => player.name).join("、") || "无玩家";
+      if (boardCell.type === "start") return `${label}｜起点格｜不触发事件｜当前位置：${playersHere}`;
+      if (!isVisited) return `${label}｜尚未揭示｜当前位置：${playersHere}`;
+      const level = getPoolLevel(index);
+      const chainInfo = level === 1 ? "无事件链" : `${level}级事件链可能触发`;
+      return `${label}｜${cellTypeText[boardCell.type]}格｜${level}级池｜${chainInfo}｜当前位置：${playersHere}`;
+    }
+
+    function addLog(text) {
+      const li = document.createElement("li");
+      li.textContent = `${logCounter++}. ${text}`;
+      logListEl.appendChild(li);
+      logListEl.scrollTop = logListEl.scrollHeight;
+    }
+
+    function saveGameState() {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({
+          config: { ...config },
+          settings: {
+            enableSubP2: document.getElementById("enableSubP2").checked,
+            enableSubP3: document.getElementById("enableSubP3").checked,
+            allowSkip: document.getElementById("allowSkip").checked
+          },
+          players, boardCells, visitedCells: Array.from(visitedCells), currentPlayerIndex, gameOver,
+          runtimePools, runtimeEndingPool, activeChains, playerStats, logCounter,
+          logs: Array.from(logListEl.children).map(li => li.textContent),
+          drawResultHtml: drawResultEl.innerHTML,
+          eventResultHtml: eventResultEl.innerHTML,
+          mobileDiceDisplayHtml: mobileDiceDisplayEl.innerHTML
+        }));
+      } catch (error) { console.warn("保存失败", error); }
+    }
+
+    function loadGameState() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return alert("没有找到上次保存的进度");
+      try {
+        const data = JSON.parse(raw);
+        Object.assign(config, data.config || {});
+        players = data.players || [];
+        boardCells = data.boardCells || [];
+        visitedCells = new Set(data.visitedCells || [0]);
+        currentPlayerIndex = data.currentPlayerIndex || 0;
+        gameOver = Boolean(data.gameOver);
+        runtimePools = data.runtimePools || createRuntimePools();
+        runtimeEndingPool = data.runtimeEndingPool || shuffleCopy(endingGoldenPool);
+        activeChains = data.activeChains || {};
+        playerStats = data.playerStats || {};
+        logCounter = data.logCounter || 1;
+        pendingAfterModal = null;
+        isMoving = false;
+        activeMovingPlayerIndex = null;
+        document.getElementById("playerCountInput").value = config.playerCount;
+        document.getElementById("boardSizeInput").value = config.boardSize;
+        document.getElementById("enableSubP2").checked = Boolean(data.settings?.enableSubP2);
+        document.getElementById("enableSubP3").checked = Boolean(data.settings?.enableSubP3);
+        document.getElementById("allowSkip").checked = Boolean(data.settings?.allowSkip);
+        drawResultEl.innerHTML = data.drawResultHtml || "点击“投骰子”开始游戏";
+        eventResultEl.innerHTML = data.eventResultHtml || "尚未触发格子内容";
+        mobileDiceDisplayEl.innerHTML = data.mobileDiceDisplayHtml || "等待玩家投骰子";
+        logListEl.innerHTML = "";
+        (data.logs || []).forEach(text => { const li = document.createElement("li"); li.textContent = text; logListEl.appendChild(li); });
+        closeEventModal(false);
+        setRollButtons(gameOver, gameOver ? "游戏结束" : "投骰子");
+        renderAll();
+      } catch (error) { alert("读取失败：保存数据可能损坏"); console.error(error); }
+    }
+
+    function clearSavedGame() { localStorage.removeItem(SAVE_KEY); alert("已清除保存进度"); }
+
+    function importEventsFromJson() {
+      const raw = document.getElementById("eventImportText").value.trim();
+      if (!raw) return alert("请先粘贴事件JSON");
+      try {
+        const data = JSON.parse(raw);
+        appendImportedEvents(data);
+        runtimePools = createRuntimePools();
+        runtimeEndingPool = shuffleCopy(endingGoldenPool);
+        activeChains = {};
+        saveGameState();
+        alert("事件内容已作为额外事件追加。当前牌池已重洗。源文件内置事件仍然保留。 ");
+      } catch (error) { alert("导入失败：JSON格式不正确"); console.error(error); }
+    }
+
+    function appendImportedEvents(data) {
+      ["task", "reward", "penalty"].forEach(type => {
+        [1, 2, 3].forEach(level => {
+          const list = data?.[type]?.[String(level)] || data?.[type]?.[level];
+          if (!Array.isArray(list)) return;
+          list.forEach((item, i) => goldenPools[type][level].push(normalizeEventItem(item, type, level, `import-${Date.now()}-${type}-${level}-${i}`)));
+        });
+      });
+
+      [1, 2, 3].forEach(level => {
+        const list = data?.taskSub?.[String(level)] || data?.taskSub?.[level];
+        if (!Array.isArray(list)) return;
+        list.forEach((item, i) => {
+          goldenPools.task[level].push({
+            ...normalizeEventItem(item, "task", level, `import-${Date.now()}-taskSub-${level}-${i}`),
+            isSub: true
+          });
+        });
+      });
+      if (Array.isArray(data.ending)) data.ending.forEach((item, i) => endingGoldenPool.push(normalizeEventItem(item, "ending", "ending", `import-${Date.now()}-ending-${i}`)));
+    }
+
+    function shuffle(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } return array; }
+    function shuffleCopy(array) { return shuffle([...array]); }
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+    initGame();
+  </script>
+</body>
+</html>
+
