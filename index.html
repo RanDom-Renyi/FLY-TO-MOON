@@ -1198,7 +1198,7 @@ function createEventChains() {
     function createBoardCells(size) {
       const usable = size - 1;
       const rewardCount = Math.round(usable * 0.1);
-      const penaltyCount = Math.round(usable * 0.2);
+      const penaltyCount = Math.round(usable * 0.25);
       const taskCount = usable - rewardCount - penaltyCount;
       const types = shuffle([...Array(rewardCount).fill("reward"), ...Array(penaltyCount).fill("penalty"), ...Array(taskCount).fill("task")]);
       return Array.from({ length: size }, (_, i) => i === 0 ? { index: i, type: "start" } : { index: i, type: types[i - 1] });
